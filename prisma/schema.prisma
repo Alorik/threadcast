@@ -18,7 +18,9 @@ model User {
   onboarded Boolean  @default(false)
   updatedAt DateTime @updatedAt
   username  String?  @unique
-  post      Post[]
+  posts      Post[]
+  comments   Comment[]
+  likes      Like[]
 }
 
 model Post {
@@ -33,8 +35,15 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   media     Media[]
-  
+  likes      Like[]
+  comments    Comment[]
 }
+enum PostType {
+  CHAT
+  THREAD
+  MICRO
+}
+
 
 model Media {
   id      String     @id @default(uuid())
@@ -44,8 +53,28 @@ model Media {
   createdAt DateTime  @default(now())
 }
 
-enum PostType {
-  CHAT
-  THREAD
-  MICRO
+model Like{
+  id     String     @id @default(uuid())
+  userId String
+  user   User       @relation(fields: [userId], references: [id])
+
+  postId String
+  post   Post       @relation(fields: [postId], references: [id])
+
+  createdAt DateTime  @default(now())
+  @@unique([userId, postId])
 }
+
+model Comment{
+  id        String     @unique @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+
+  postId    String    
+  post      Post       @relation(fields: [postId], references: [id])
+
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
