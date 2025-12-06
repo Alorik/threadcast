@@ -1,2 +1,4 @@
 import NextAuth from "next-auth";
-import {PrismaA}
+import { PrismaAdapter } from "@prisma/client";
+import bcrpyt from "bcrypt";
+import 
