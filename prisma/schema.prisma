@@ -12,13 +12,13 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?  @unique
-  password  String?
+  password  String
   createdAt DateTime @default(now())
   bio       String?
   avatarUrl String?
   onboarded Boolean  @default(false)
   updatedAt DateTime @updatedAt
-  username  String?  @unique
+  username  String  @unique
   posts      Post[]
   comments   Comment[]
   likes      Like[]
