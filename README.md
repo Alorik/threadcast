@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🚀 Super Social App — Phase 1 (Auth + Profile)
 
-## Getting Started
+A full-stack social media / collaborative platform built using:
+	•	Next.js App Router (React)
+	•	NextAuth (credentials + OAuth)
+	•	Prisma ORM
+	•	PostgreSQL
+	•	TypeScript
+	•	Zod for validation
 
-First, run the development server:
+This document covers everything implemented in Phase 1.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+⸻
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+📦 Current Features (Phase 1 Complete)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+✔️ Authentication
+	•	Credentials-based login and registration
+	•	Google OAuth provider ready (optional)
+	•	Secure password hashing with bcrypt
+	•	JWT session strategy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+✔️ User Profile
+	•	Onboarding flow for first-time users
+	•	/api/me endpoint to view & update authed user profile
+	•	Basic fields:
+	•	email
+	•	username
+	•	bio
+	•	avatarUrl
 
-## Learn More
+✔️ Protected Routes
+	•	Authentication required for protected sections
+	•	Access control using sessions
 
-To learn more about Next.js, take a look at the following resources:
+✔️ Postman Tested Successfully
+	•	Login (credentials)
+	•	Register
+	•	GET /api/me
+	•	PATCH /api/me
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+⸻
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+📂 Folder Structure Summary
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+🧑‍💻 API Routes Implemented
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+POST /api/auth/register
+	•	Creates a new user
+	•	Hashes password with bcrypt
+	•	Validates with Zod
+
+POST /api/auth/callback/credentials
+	•	Authenticates credentials via NextAuth
+	•	Returns session cookies
+
+GET /api/auth/session
+	•	Check current logged-in user
+
+GET /api/me
+	•	Returns logged-in user (session required)
+
+PATCH /api/me
+	•	Updates username, bio, and avatar URL
+	•	Requires auth
+
+
+  🔐 Authentication Flow
+	1.	User hits /auth/register (UI form)
+	2.	User logs in via /auth/login
+	3.	NextAuth sets session tokens
+	4.	System checks:
+	•	If user has username, proceed
+	•	If user does not have username, redirect /onboarding
+  
+🎨 Frontend Screens (Minimal)
+
+/auth/login
+	•	Email + password login form
+	•	Calls signIn("credentials")
+
+/auth/error
+	•	Handles login errors
+
+/onboarding
+	•	Updates profile details
+	•	Uses PATCH /api/me

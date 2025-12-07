@@ -27,3 +27,14 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ success: true, user });
 }
+
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    return Response.json({ user: null }, { status: 200 });
+  }
+
+  return Response.json({ user: session.user });
+}

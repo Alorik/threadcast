@@ -1,8 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-
-
+import { useState } from "react";
 
 export default function OnboardingPage() {
   const [username, setUsername] = useState<string>("");
@@ -12,7 +10,7 @@ export default function OnboardingPage() {
     const res = await fetch("/api/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, bio })
+      body: JSON.stringify({ username, bio }),
     });
     console.log(await res.json());
   }
@@ -33,8 +31,7 @@ export default function OnboardingPage() {
         value={bio}
         onChange={(e) => setBio(e.target.value)}
       />
-      <button
-      onClick={submit}>Save</button>
+      <button onClick={submit}>Save</button>
     </div>
   );
 }
