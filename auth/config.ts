@@ -1,4 +1,3 @@
-
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcrypt";
 import { LoginSchema } from "@/schema/auth";
@@ -6,33 +5,33 @@ import GoogleProvider from "next-auth/providers/google";
 import type { NextAuthOptions } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { NextResponse } from "next/server";
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
   },
-
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: { params: { prompt: "select_account" } },
     }),
-
     CredentialsProvider({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-
       async authorize(credentials) {
+        console.log("🔥 AUTHORIZE CALLED 🔥", credentials);
+        
         // Validate input
         const parsed = LoginSchema.safeParse(credentials);
-         if (!parsed.success) {
-           return null;
-         }
+        if (!parsed.success) {
+          console.log("❌ Validation failed");
+          return null;
+        }
 
         const { email, password } = parsed.data;
 
@@ -41,23 +40,24 @@ export const authOptions: NextAuthOptions = {
           where: { email },
         });
 
-        // Check if user exists and has password (not OAuth-only)
         if (!user || !user.password) {
+          console.log("❌ User not found or no password");
           return null;
         }
 
-        // Check if user has completed onboarding
         if (!user.username) {
-        return null;
+          console.log("❌ User has no username");
+          return null;
         }
 
         // Verify password
-       const isValid = await bcrypt.compare(password, user.password);
-       if (!isValid) {
-         return null;
-       }
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+          console.log("❌ Invalid password");
+          return null;
+        }
 
-        // Return user object
+        console.log("✅ User authenticated successfully");
         return {
           id: user.id,
           email: user.email,
@@ -68,17 +68,15 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.email = user.email ?? "";
-        token.username = user.username ;
+        token.username = user.username;
       }
       return token;
     },
-
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
@@ -87,15 +85,12 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-
-    // Handle Google OAuth users without username
     async signIn({ user, account }) {
       if (account?.provider === "google") {
         const existingUser = await prisma.user.findUnique({
           where: { email: user.email! },
         });
 
-        // If user exists but has no username, redirect to onboarding
         if (existingUser && !existingUser.username) {
           return "/onboarding";
         }
@@ -103,10 +98,8 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
   },
-
   pages: {
     signIn: "/auth/login",
     error: "/auth/error",
   },
 };
-
