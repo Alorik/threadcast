@@ -2,7 +2,7 @@ import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
 import { CreatePostSchema } from "@/schema/auth";
 import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
   const posts = await prisma.post.findMany({
@@ -20,7 +20,7 @@ export async function GET() {
   return Response.json(posts);
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ message: "Unauthenticated", status: 400 });
