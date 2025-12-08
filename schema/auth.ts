@@ -11,7 +11,7 @@ export const LoginSchema = z.object({
   password: z.string().min(7).max(20),
 });
 
-export const PostSchema = z.object({
+export const CreatePostSchema = z.object({
   content: z
     .string()
     .min(1, "Post cannot be empty")
