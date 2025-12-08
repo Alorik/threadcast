@@ -9,58 +9,58 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?  @unique
-  password  String
-  createdAt DateTime @default(now())
-  bio       String?
-  avatarUrl String?
-  onboarded Boolean  @default(false)
-  updatedAt DateTime @updatedAt
-  username  String  @unique
-  posts      Post[]
-  comments   Comment[]
-  likes      Like[]
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String?  @unique
+  password    String
+  createdAt   DateTime @default(now())
+  bio         String?
+  avatarUrl   String?
+  onboarded   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  username    String  @unique
+  posts       Post[]
+  comments    Comment[]
+  likes       Like[]
 }
 
 model Post {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  parentId  String?   
-  parent    Post?    @relation("PostToReplies", fields: [parentId], references: [id])
-  replies   Post[]   @relation("PostToReplies")
-  content   String
-  type      PostType @default(MICRO)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  media     Media[]
-  likes      Like[]
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  parentId    String?   
+  parent      Post?    @relation("PostToReplies", fields: [parentId], references: [id])
+  replies     Post[]   @relation("PostToReplies")
+  content     String
+  type        PostType @default(MICRO)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  media       Media[]
+  likes       Like[]
   comments    Comment[]
 }
+
 enum PostType {
   CHAT
   THREAD
   MICRO
 }
 
-
 model Media {
-  id      String     @id @default(uuid())
-  postId  String
-  post    Post      @relation(fields: [postId], references: [id])
-  url     String
+  id        String     @id @default(uuid())
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id])
+  url       String
   createdAt DateTime  @default(now())
 }
 
 model Like{
-  id     String     @id @default(uuid())
-  userId String
-  user   User       @relation(fields: [userId], references: [id])
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
 
-  postId String
-  post   Post       @relation(fields: [postId], references: [id])
+  postId    String
+  post      Post       @relation(fields: [postId], references: [id])
 
   createdAt DateTime  @default(now())
   @@unique([userId, postId])
@@ -78,4 +78,3 @@ model Comment{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
