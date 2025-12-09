@@ -2,7 +2,7 @@ import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { success } from "zod";
+
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -22,6 +22,7 @@ export async function PATCH(req: NextRequest) {
       username,
       bio,
       avatarUrl,
+      onboarded: true
     },
   });
 

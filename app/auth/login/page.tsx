@@ -1,12 +1,14 @@
 "use client"
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
 
+  const router = useRouter();
   async function handleLogin() {
     setError("");
 
@@ -20,7 +22,15 @@ export default function LoginPage() {
       setError("Invalid email or password");
       return;
     }
-    window.location.href = "/onboarding";
+
+    const response = await fetch("/api/auth/session");
+    const session = await response.json();
+    if (session?.user?.username) {
+      router.push("/feed");
+    } else {
+   router.push("/onboarding")   
+    }
+   
   }
   return (
     <div className="p-8">

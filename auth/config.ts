@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         console.log("🔥 AUTHORIZE CALLED 🔥", credentials);
-        
+
         // Validate input
         const parsed = LoginSchema.safeParse(credentials);
         if (!parsed.success) {
@@ -85,21 +85,24 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async signIn({ user, account }) {
-      if (account?.provider === "google") {
+    async signIn({ user }) {
+
         const existingUser = await prisma.user.findUnique({
           where: { email: user.email! },
+          select: {
+            username: true,
+          },
         });
 
         if (existingUser && !existingUser.username) {
           return "/onboarding";
         }
-      }
+
       return true;
     },
   },
   pages: {
     signIn: "/auth/login",
-    error: "/auth/error",
+    newUser: "/onboarding",
   },
 };
