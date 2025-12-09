@@ -1,4 +1,5 @@
 import CreatePostForm from "@/components/create-post-form";
+import LikeButton from "@/components/like-button";
 import { prisma } from "@/lib/prisma";
 
 export default async function FedPage() {
@@ -12,6 +13,9 @@ export default async function FedPage() {
           avatarUrl: true,
         },
       },
+      _count: {
+        select: {likes: true}
+      }
     },
   });
 
@@ -37,6 +41,10 @@ export default async function FedPage() {
                 </span>
               </div>
               <p className="text-sm">{post.content}</p>
+              <div className="flex items-center gap-2 text-xstext-gray-700">
+                <span>❤️ {post._count.likes} likes</span>
+                <LikeButton postId={post.id} />
+              </div>
             </article>
           ))}
         </div>

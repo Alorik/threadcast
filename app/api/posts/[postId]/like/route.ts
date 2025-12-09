@@ -5,14 +5,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> } // ✅ params is now a Promise
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ message: "Unauthorized", status: 401 });
   }
 
-  const { postId } = params;
+  const { postId } = await params;
   try {
     const like = await prisma.like.create({
       data: {
@@ -34,9 +34,10 @@ export async function POST(
 }
 
 //unlike
+
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> } // ✅ params is a Promise
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -46,7 +47,7 @@ export async function DELETE(
     });
   }
 
-  const { postId } = params;
+  const { postId } = await params;
 
   await prisma.like.deleteMany({
     where: {
