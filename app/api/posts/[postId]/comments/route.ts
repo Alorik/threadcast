@@ -30,3 +30,16 @@ export async function POST(
 
   return NextResponse.json(comment, { status: 201 });
 }
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ postId: string }> }
+) {
+  const comments = await prisma.comment.findMany({
+    where: { postId: (await params).postId },
+    include: { user: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json(comments, { status: 201 });
+}
