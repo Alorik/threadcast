@@ -38,6 +38,7 @@ model Post {
   media       Media[]
   likes       Like[]
   comments    Comment[]
+  
 }
 
 enum PostType {
