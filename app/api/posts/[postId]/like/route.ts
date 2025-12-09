@@ -55,4 +55,6 @@ export async function DELETE(
       userId: session.user.id,
     },
   });
+
+  return NextResponse.json({ message: "Unliked" }, { status: 200 });
 }

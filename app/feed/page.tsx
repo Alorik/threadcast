@@ -1,8 +1,14 @@
+import { authOptions } from "@/auth/config";
 import CreatePostForm from "@/components/create-post-form";
 import LikeButton from "@/components/like-button";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
 
-export default async function FedPage() {
+export default async function FeedPage() {
+
+  const session = await getServerSession(authOptions);
+  const currentUserId = session?.user?.id ?? "";
+
   const posts = await prisma.post.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -15,7 +21,15 @@ export default async function FedPage() {
       },
       _count: {
         select: {likes: true}
-      }
+      },
+      likes: {
+        where: {
+          userId: currentUserId,
+        },
+        select: {
+          userId: true,
+        },
+      },
     },
   });
 
@@ -43,7 +57,8 @@ export default async function FedPage() {
               <p className="text-sm">{post.content}</p>
               <div className="flex items-center gap-2 text-xstext-gray-700">
                 <span>❤️ {post._count.likes} likes</span>
-                <LikeButton postId={post.id} />
+                <LikeButton postId={post.id}
+                  liked={ post.likes.length > 0} />
               </div>
             </article>
           ))}

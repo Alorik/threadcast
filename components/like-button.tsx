@@ -5,19 +5,21 @@ import { useRouter } from "next/navigation";
 
 type LikeButtonProps = {
   postId: string;
+  liked: boolean;
 };
 
-export default function LikeButton({ postId }: LikeButtonProps) {
+export default function LikeButton({ postId, liked }: LikeButtonProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   async function handleLike() {
     setError(null);
+    const method = liked ? "DELETE" : "POST";
 
     try {
       const res = await fetch(`/api/posts/${postId}/like`, {
-        method: "POST",
+        method,
       });
 
       if (res.status === 401) {
@@ -47,7 +49,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
         disabled={isPending}
         className="border px-2 py-1 rounded text-xs disabled:opacity-50"
       >
-        {isPending ? "Liking..." : "Like"}
+        {isPending ? "..." : liked ? "Unlike" : "like"}
       </button>
       {error && <span className="text-[10px] text-red-500">{error}</span>}
     </div>
