@@ -31,6 +31,7 @@ model Post {
   parentId    String?   
   parent      Post?    @relation("PostToReplies", fields: [parentId], references: [id])
   replies     Post[]   @relation("PostToReplies")
+  mediaUrl    String?
   content     String
   type        PostType @default(MICRO)
   createdAt   DateTime @default(now())
