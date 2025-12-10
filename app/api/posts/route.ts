@@ -15,6 +15,7 @@ export async function GET() {
           avatarUrl: true,
         },
       },
+      
     },
   });
   return Response.json(posts);

@@ -12,6 +12,8 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { postId } = await params; // ✅ Await params
+
   const { content } = await req.json();
   if (!content || !content.trim()) {
     return NextResponse.json(
@@ -23,7 +25,7 @@ export async function POST(
   const comment = await prisma.comment.create({
     data: {
       content,
-      postId: (await params).postId,
+      postId, // ✅ Use destructured postId
       userId: session.user.id,
     },
   });
@@ -35,11 +37,20 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ postId: string }> }
 ) {
+  const { postId } = await params; // ✅ Await params
+
   const comments = await prisma.comment.findMany({
-    where: { postId: (await params).postId },
-    include: { user: true },
-    orderBy: { createdAt: "desc" },
+    where: { postId }, // ✅ Use destructured postId
+    include: {
+      user: {
+        select: {
+          username: true,
+          avatarUrl: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" }, // ✅ Changed to "asc" for chronological order
   });
 
-  return NextResponse.json(comments, { status: 201 });
+  return NextResponse.json(comments, { status: 200 }); // ✅ Changed to 200 for GET
 }
