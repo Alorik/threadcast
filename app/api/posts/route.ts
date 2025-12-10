@@ -1,6 +1,5 @@
 import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
-import { CreatePostSchema } from "@/schema/auth";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -15,7 +14,6 @@ export async function GET() {
           avatarUrl: true,
         },
       },
-
     },
   });
   return Response.json(posts);
