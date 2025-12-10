@@ -66,7 +66,13 @@ export default async function FeedPage() {
                   {new Date(post.createdAt).toLocaleString()}
                 </span>
               </div>
-
+              {post.mediaUrl && (
+                <img
+                  src={post.mediaUrl}
+                  alt="Post media"
+                  className="w-full rounded-md mt-2 max-h-80 object-cover"
+                />
+              )}
               <p className="text-sm">{post.content}</p>
 
               <div className="flex items-center gap-3 text-xs text-gray-700">

@@ -1,65 +1,81 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function CreatePostForm() {
-  const [content, setContent] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [content, setContent] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    if (!content.trim()) {
-      setError("Post cannot be empty");
-      return;
-    }
-
     setLoading(true);
 
-    const res = await fetch("/api/posts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
-    });
+    let mediaUrl = null;
 
-    setLoading(false);
+    // 1. Upload image if exists
+    if (file) {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    if (!res.ok) {
-      if (res.status === 401) {
-        setError("You must be logged in to post.");
-      } else {
-        setError("Failed to create post.");
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json();
+      if (uploadData.url) {
+        mediaUrl = uploadData.url;
       }
-      return;
     }
 
+    // 2. Create post
+    await fetch("/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content, mediaUrl }),
+    });
+
     setContent("");
-    router.push("");
+    setFile(null);
+    setLoading(false);
+    router.refresh();
   }
 
   return (
-    <div>
-      <form onSubmit={handleSubmit} className="space-y-2 border rounded-md p-3">
-        <textarea
-          rows={3}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="w-full border rounded-md p-2 text-sm"
-          placeholder="Post your content here"
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        className="w-full border p-2 rounded"
+        placeholder="What's happening?"
+        required
+      />
+
+      {/* Image input */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+      />
+
+      {/* Preview */}
+      {file && (
+        <img
+          src={URL.createObjectURL(file)}
+          className="h-40 object-cover rounded"
         />
-        {error && <p className="text-xs text-red-500">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="text-sm border px-3 py-1 rounded-md disabled:opacity-50"
-        >
-          {" "}
-          {loading ? "Posting..." : "Post"}
-        </button>
-      </form>
-    </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="px-4 py-2 border rounded"
+      >
+        {loading ? "Posting..." : "Post"}
+      </button>
+    </form>
   );
 }

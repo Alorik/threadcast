@@ -15,7 +15,7 @@ export async function GET() {
           avatarUrl: true,
         },
       },
-      
+
     },
   });
   return Response.json(posts);
@@ -23,20 +23,24 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ message: "Unauthenticated", status: 400 });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const data = await req.json();
-  const parsed = CreatePostSchema.safeParse(data);
-  if (!parsed.success) {
-    return NextResponse.json({ message: "Invalid Data" }, { status: 400 });
+  // FIX: extract mediaUrl too
+  const { content, mediaUrl } = await req.json();
+
+  if (!content || !content.trim()) {
+    return NextResponse.json(
+      { error: "Content cannot be empty" },
+      { status: 400 }
+    );
   }
 
-  const { content } = parsed.data;
   const post = await prisma.post.create({
     data: {
       content,
+      mediaUrl: mediaUrl || null, // FIXED
       userId: session.user.id,
     },
   });
