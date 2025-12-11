@@ -1,134 +1,74 @@
-"use client";
-import { useState, useEffect } from "react";
+
+import { authOptions } from "@/auth/config";
 import UploadAvatar from "@/components/avatar";
 import ProfileCard from "@/components/profile-card";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
 
-export default function UserProfile({
+export default async function UserProfile({
   params,
 }: {
   params: { username: string };
 }) {
-  const { data: session, status } = useSession();
-  const [user, setUser] = useState<any>(null);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [avatar, setAvatar] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const router = useRouter();
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized", status: 401 });
+  }
+  const { username } = await params;
+  const user = await prisma.user.findUnique({
+    where: { username },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      bio: true,
+      avatarUrl: true,
+    },
+  });
 
-  useEffect(() => {
-    async function fetchUserProfile() {
-      if (status === "loading") return;
+  if (!user) {
+    return (
+      <div className="text-lg font-medium text-red-500">User not found</div>
+    );
+  }
 
-      if (!session) {
-        setError("Unauthorized");
-        setLoading(false);
-        return;
-      }
+  const isOwnProfile =
+    session.user.id === user.id || session.user.username === username;
 
-      try {
-        const username = (await params).username;
-        const response = await fetch(`/api/users/${username}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          setError(data.message || "User not found");
-          setLoading(false);
-          return;
-        }
-
-        // Check if own profile
-        const isOwn =
-          session.user.id === data.user.id ||
-          session.user.username === username;
-
-        if (!isOwn) {
-          setError("Access Denied: You can only view your own profile");
-          setLoading(false);
-          return;
-        }
-
-        setUser(data.user);
-        setPosts(data.posts);
-        setAvatar(data.user.avatarUrl || "");
-        setLoading(false);
-      } catch (err) {
-        setError("Failed to load profile");
-        setLoading(false);
-      }
-    }
-
-    fetchUserProfile();
-  }, [session, status, params]);
-
-  if (loading) {
+  if (!isOwnProfile) {
     return (
       <div className="max-w-3xl mx-auto p-4">
-        <div className="text-center">Loading...</div>
+        <div className="text-lg font-medium text-red-500">
+          Access Denied: You can only view your own profile
+        </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="max-w-3xl mx-auto p-4">
-        <div className="text-lg font-medium text-red-500">{error}</div>
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  const isOwnProfile = session?.user.id === user.id;
+  const posts = await prisma.post.findMany({
+    where: { userId: user.id },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="space-y-6">
-        <ProfileCard
-          user={{ ...user, avatarUrl: avatar }}
-          postCount={posts.length}
-          avatarUrl={avatar}
-          isOwnProfile={isOwnProfile}
-          onAvatarClick={() => {
-            document.getElementById("avatar-file-input")?.click();
-          }}
-        />
-
-        {isOwnProfile && (
-          <div className="border rounded-md p-4">
-            <UploadAvatar
-              onUploaded={(newUrl) => {
-                setAvatar(newUrl);
-                router.refresh();
-              }}
-            />
-          </div>
-        )}
+    <div className="max-w-3xl mx-auto p-4 space-y-6">
+      <ProfileCard user={user} postCount={posts.length} />
+      <div className="border rounded-md p-4">
+        <UploadAvatar />
       </div>
-
       <h2 className="text-lg font-semibold mt-6">Posts</h2>
       <div className="space-y-3">
-        {posts.length === 0 ? (
-          <div className="text-gray-500">No posts yet</div>
-        ) : (
-          posts.map((post) => (
-            <div key={post.id} className="border p-3 rounded-md">
-              <p>{post.content}</p>
-              {post.mediaUrl && (
-                <img
-                  src={post.mediaUrl}
-                  alt="Post media"
-                  className="mt-2 rounded max-w-full"
-                />
-              )}
-              <div className="text-sm text-gray-500 mt-2">
-                {new Date(post.createdAt).toLocaleDateString()}
-              </div>
-            </div>
-          ))
-        )}
+        {posts.map((post) => (
+          <div key={post.id} className="border p-3 rounded-md">
+            <p>{post.content}</p>
+            {post.mediaUrl && (
+              <img src={post.mediaUrl} className="mt-2 rounded" />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
