@@ -44,12 +44,8 @@ export default function UploadAvatar({
     }
   }
 
-  function triggerFileInput() {
-    document.getElementById("avatar-file-input")?.click();
-  }
-
   return (
-    <div className="space-y-3">
+    <>
       <input
         type="file"
         accept="image/*"
@@ -58,15 +54,11 @@ export default function UploadAvatar({
         id="avatar-file-input"
       />
 
-      <button
-        onClick={triggerFileInput}
-        disabled={uploading}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-      >
-        {uploading ? "Uploading..." : "Choose Avatar"}
-      </button>
-
-      {uploading && <p className="text-gray-500 text-sm">Uploading...</p>}
-    </div>
+      {uploading && (
+        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
+          Uploading avatar...
+        </div>
+      )}
+    </>
   );
 }

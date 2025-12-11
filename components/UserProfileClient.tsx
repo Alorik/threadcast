@@ -1,4 +1,6 @@
-"use client"
+// components/UserProfileClient.tsx ✅ ADD SAFETY CHECK
+"use client";
+
 import { useState } from "react";
 import ProfileCard from "./profile-card";
 import UploadAvatar from "./avatar";
@@ -8,35 +10,59 @@ export default function UserProfileClient({
   posts,
   isOwnProfile,
 }: {
-  user: any;
+  user: {
+    id: string;
+    username: string;
+    name?: string | null;
+    bio?: string | null;
+    avatarUrl?: string | null;
+  };
   posts: any[];
   isOwnProfile: boolean;
-  }) {
+}) {
+  // ✅ ADD SAFETY CHECK - prevent crashes if user is undefined
+  if (!user) {
+    return (
+      <div className="max-w-3xl mx-auto p-4">
+        <div className="text-lg font-medium text-red-500">
+          User data not available
+        </div>
+      </div>
+    );
+  }
 
-  
-  const [avatarUrl, setAvatarurl] = useState(user.avatarUrl);
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || "");
+
+  function handleAvatarClick() {
+    document.getElementById("avatar-file-input")?.click();
+  }
+
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-6">
+      <UploadAvatar onUploaded={(url) => setAvatarUrl(url)} />
+
       <ProfileCard
         user={user}
         postCount={posts.length}
         isOwnProfile={isOwnProfile}
-        avatarUrl={avatarUrl} // 👈 Send updated avatar
+        avatarUrl={avatarUrl}
+        onAvatarClick={handleAvatarClick}
       />
-      <div className="border rounded-md p-4">
-        <UploadAvatar onUploaded={(url) => setAvatarurl(url)} />
-      </div>
 
       <h2 className="text-lg font-semibold mt-6">Posts</h2>
       <div className="space-y-3">
-        {posts.map((post) => (
-          <div key={post.id} className="border p-3 rounded-md">
-            <p>{post.content}</p>
-            {post.mediaUrl && (
-              <img src={post.mediaUrl} className="mt-2 rounded" />
-            )}
-          </div>
-        ))}
+        {posts.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">No posts yet</p>
+        ) : (
+          posts.map((post) => (
+            <div key={post.id} className="border p-3 rounded-md">
+              <p>{post.content}</p>
+              {post.mediaUrl && (
+                <img src={post.mediaUrl} className="mt-2 rounded" alt="post" />
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
