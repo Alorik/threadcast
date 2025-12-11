@@ -1,6 +1,6 @@
 // components/UserProfileClient.tsx ✅ ADD SAFETY CHECK
 "use client";
-
+import Image from "next/image";
 import { useState } from "react";
 import ProfileCard from "./profile-card";
 import UploadAvatar from "./avatar";
@@ -58,7 +58,13 @@ export default function UserProfileClient({
             <div key={post.id} className="border p-3 rounded-md">
               <p>{post.content}</p>
               {post.mediaUrl && (
-                <img src={post.mediaUrl} className="mt-2 rounded" alt="post" />
+                <Image
+                  height={400}
+                  width={400}
+                  src={post.mediaUrl}
+                  className="mt-2 rounded"
+                  alt="post"
+                />
               )}
             </div>
           ))

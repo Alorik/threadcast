@@ -1,4 +1,5 @@
 // components/profile-card.tsx
+import Image from "next/image";
 export default function ProfileCard({
   user,
   postCount,
@@ -21,10 +22,12 @@ export default function ProfileCard({
   return (
     <div className="border rounded-md p-4 flex items-center gap-6">
       <div className="relative">
-        <img
+        <Image
           key={avatarUrl} // Force re-render when avatar changes
           src={avatarUrl || user.avatarUrl || "https://via.placeholder.com/120"}
           alt={`${user.username}'s avatar`}
+          height={400}
+          width={400}
           className={`w-24 h-24 rounded-full object-cover ${
             isOwnProfile ? "cursor-pointer hover:opacity-70 transition" : ""
           }`}

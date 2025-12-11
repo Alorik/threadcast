@@ -4,6 +4,7 @@ import CreatePostForm from "@/components/create-post-form";
 import LikeButton from "@/components/like-button";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
+import Image from "next/image";
 
 export default async function FeedPage() {
   const session = await getServerSession(authOptions);
@@ -67,10 +68,11 @@ export default async function FeedPage() {
                 </span>
               </div>
               {post.mediaUrl && (
-                <img
+                <Image
                   src={post.mediaUrl}
                   alt="Post media"
                   className="w-full rounded-md mt-2 max-h-80 object-cover"
+                  sizes="(max-width: 768px) 100vw, 768px"
                 />
               )}
               <p className="text-sm">{post.content}</p>
