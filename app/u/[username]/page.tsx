@@ -1,4 +1,6 @@
+
 import { authOptions } from "@/auth/config";
+import UploadAvatar from "@/components/avatar";
 import ProfileCard from "@/components/profile-card";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -54,6 +56,9 @@ export default async function UserProfile({
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-6">
       <ProfileCard user={user} postCount={posts.length} />
+      <div className="border rounded-md p-4">
+        <UploadAvatar />
+      </div>
       <h2 className="text-lg font-semibold mt-6">Posts</h2>
       <div className="space-y-3">
         {posts.map((post) => (
