@@ -1,55 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
-import { randomUUID } from "crypto";
+import { cloudinary } from "@/lib/cloudinary";
+
+export const runtime = "nodejs"; // IMPORTANT for upload_stream
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const form = await req.formData();
+    const file = form.get("file") as File | null;
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${randomUUID()}.${fileExt}`;
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from("post-media")
-      .upload(fileName, buffer, {
-        contentType: file.type,
-        upsert: false,
-      });
-
-    if (error) {
-      console.error("Supabase upload error:", error);
-      return NextResponse.json(
-        {
-          error: "Upload failed",
-          details: error.message,
-        },
-        { status: 500 }
+    // Cloudinary upload wrapped in a Promise that ALWAYS resolves or rejects
+    const uploadedImage = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: "threadcast" },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
       );
-    }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from("post-media")
-      .getPublicUrl(fileName);
+      uploadStream.end(buffer);
+    });
 
-    console.log("Public URL generated:", urlData.publicUrl);
-
-    return NextResponse.json({ url: urlData.publicUrl }, { status: 200 });
-  } catch (error) {
-    console.error("Upload error:", error);
     return NextResponse.json(
-      {
-        error: "Server error",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
+      { url: (uploadedImage as any).secure_url },
+      { status: 200 }
+    );
+  } catch (err: any) {
+    console.error("UPLOAD ERROR:", err);
+    return NextResponse.json(
+      { error: err.message || "Upload failed" },
       { status: 500 }
     );
   }
