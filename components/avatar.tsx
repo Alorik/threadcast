@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 
-export default function UploadAvatar() {
-  const [avatar, setAvatar] = useState<string | null>(null);
+export default function UploadAvatar({
+  onUploaded,
+}: {
+  onUploaded: (url: string) => void;
+}) {
   const [uploading, setUploading] = useState(false);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -12,6 +15,7 @@ export default function UploadAvatar() {
 
     setUploading(true);
 
+    // Upload to Cloudinary
     const form = new FormData();
     form.append("file", file);
 
@@ -21,38 +25,31 @@ export default function UploadAvatar() {
     });
 
     const { url } = await uploadRes.json();
-    setAvatar(url);
 
+    // Save URL to DB
     await fetch("/api/me/avatar", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ avatarUrl: url }),
     });
 
+    // 🔥 RETURN new avatar URL to parent
+    onUploaded(url);
+
     setUploading(false);
   }
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-sm">Upload Avatar</label>
-        <input
-          type="file"
-          accept="image/*"
-          className="mt-1"
-          onChange={handleFileUpload}
-        />
-      </div>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+        id="avatar-file-input"
+      />
 
       {uploading && <p className="text-gray-500 text-sm">Uploading...</p>}
-
-      {avatar && (
-        <img
-          src={avatar}
-          alt="avatar preview"
-          className="w-24 h-24 rounded-full border"
-        />
-      )}
     </div>
   );
 }

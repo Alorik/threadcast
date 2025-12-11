@@ -32,10 +32,38 @@ export async function PATCH(req: NextRequest) {
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    return Response.json({ user: null }, { status: 200 });
+  
+  if (!session) {
+    return NextResponse.json(
+      { message: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
-  return Response.json({ user: session.user });
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      bio: true,
+      avatarUrl: true,
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { message: "User not found" },
+      { status: 404 }
+    );
+  }
+
+  const posts = await prisma.post.findMany({
+    where: { userId: user.id },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return NextResponse.json({ user, posts });
 }

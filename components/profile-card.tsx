@@ -1,6 +1,7 @@
 export default function ProfileCard({
   user,
   postCount,
+  avatarUrl,
   onAvatarClick,
   isOwnProfile,
 }: {
@@ -12,15 +13,15 @@ export default function ProfileCard({
     avatarUrl?: string | null;
   };
   postCount: number;
+  avatarUrl?: string; // NEW
   onAvatarClick?: () => void;
   isOwnProfile?: boolean;
 }) {
   return (
     <div className="border rounded-md p-4 flex items-center gap-6">
-      {/* Avatar */}
       <div className="relative">
         <img
-          src={user.avatarUrl || "https://via.placeholder.com/120"}
+          src={avatarUrl || user.avatarUrl || "https://via.placeholder.com/120"}
           className={`w-24 h-24 rounded-full object-cover cursor-pointer ${
             isOwnProfile ? "hover:opacity-70 transition" : ""
           }`}
