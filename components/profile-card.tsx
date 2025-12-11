@@ -35,6 +35,7 @@ export default function ProfileCard({
         )}
       </div>
 
+
       {/* Info */}
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">{user.username}</h1>

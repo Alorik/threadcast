@@ -1,3 +1,4 @@
+// components/avatar.tsx
 "use client";
 
 import { useState } from "react";
@@ -15,28 +16,36 @@ export default function UploadAvatar({
 
     setUploading(true);
 
-    // Upload to Cloudinary
-    const form = new FormData();
-    form.append("file", file);
+    try {
+      // Upload to Cloudinary
+      const form = new FormData();
+      form.append("file", file);
 
-    const uploadRes = await fetch("/api/upload", {
-      method: "POST",
-      body: form,
-    });
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: form,
+      });
 
-    const { url } = await uploadRes.json();
+      const { url } = await uploadRes.json();
 
-    // Save URL to DB
-    await fetch("/api/me/avatar", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ avatarUrl: url }),
-    });
+      // Save URL to DB
+      await fetch("/api/me/avatar", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarUrl: url }),
+      });
 
-    // 🔥 RETURN new avatar URL to parent
-    onUploaded(url);
+      // Return new avatar URL to parent
+      onUploaded(url);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploading(false);
+    }
+  }
 
-    setUploading(false);
+  function triggerFileInput() {
+    document.getElementById("avatar-file-input")?.click();
   }
 
   return (
@@ -48,6 +57,14 @@ export default function UploadAvatar({
         className="hidden"
         id="avatar-file-input"
       />
+
+      <button
+        onClick={triggerFileInput}
+        disabled={uploading}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+      >
+        {uploading ? "Uploading..." : "Choose Avatar"}
+      </button>
 
       {uploading && <p className="text-gray-500 text-sm">Uploading...</p>}
     </div>

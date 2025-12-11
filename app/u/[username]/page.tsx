@@ -1,10 +1,10 @@
-
+// app/u/[username]/page.tsx (SERVER COMPONENT - NO "use client")
 import { authOptions } from "@/auth/config";
-import UploadAvatar from "@/components/avatar";
-import ProfileCard from "@/components/profile-card";
+import UserProfileClient from "@/components/UserProfileClient";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
+
 
 export default async function UserProfile({
   params,
@@ -12,10 +12,10 @@ export default async function UserProfile({
   params: { username: string };
 }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized", status: 401 });
-  }
+  if (!session) redirect("/login");
+
   const { username } = await params;
+
   const user = await prisma.user.findUnique({
     where: { username },
     select: {
@@ -48,28 +48,12 @@ export default async function UserProfile({
 
   const posts = await prisma.post.findMany({
     where: { userId: user.id },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: { createdAt: "desc" },
   });
 
+  // 👇 Instead of rendering ProfileCard + UploadAvatar directly,
+  // we now send all data to a CLIENT COMPONENT that handles state.
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-6">
-      <ProfileCard user={user} postCount={posts.length} />
-      <div className="border rounded-md p-4">
-        <UploadAvatar />
-      </div>
-      <h2 className="text-lg font-semibold mt-6">Posts</h2>
-      <div className="space-y-3">
-        {posts.map((post) => (
-          <div key={post.id} className="border p-3 rounded-md">
-            <p>{post.content}</p>
-            {post.mediaUrl && (
-              <img src={post.mediaUrl} className="mt-2 rounded" />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+    <UserProfileClient user={user} posts={posts} isOwnProfile={isOwnProfile} />
   );
 }
