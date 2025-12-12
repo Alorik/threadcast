@@ -40,7 +40,7 @@ export async function POST(
       },
     });
     return NextResponse.json(
-      { message: "User followed successfully" },
+      { message: "User followed successfully", follow },
       { status: 201 }
     );
   } catch (err: any) {
