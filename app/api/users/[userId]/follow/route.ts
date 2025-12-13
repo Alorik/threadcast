@@ -5,22 +5,25 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ message: "Unauthorized", status: 401 });
   }
 
-  const targetUserId = params.userId;
+  // Await params here
+  const { userId: targetUserId } = await params;
   const currentUserId = session.user.id;
+
+  console.log("Target User ID:", targetUserId); // Debug log
 
   if (targetUserId === currentUserId) {
     return NextResponse.json(
       {
         error: "You cannot follow yourself",
       },
-      { status: 404 }
+      { status: 400 }
     );
   }
 
@@ -61,13 +64,15 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ message: "Unauthorized", status: 401 });
   }
-  const targetUserId = params.userId;
+
+  // Await params here
+  const { userId: targetUserId } = await params;
   const currentUserId = session.user.id;
 
   if (targetUserId === currentUserId) {
