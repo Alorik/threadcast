@@ -9,6 +9,7 @@ export default function UserProfileClient({
   user,
   posts,
   isOwnProfile,
+
 }: {
   user: {
     id: string;
@@ -16,6 +17,8 @@ export default function UserProfileClient({
     name?: string | null;
     bio?: string | null;
     avatarUrl?: string | null;
+    followerCount: number;
+    followingCount: number;
   };
   posts: any[];
   isOwnProfile: boolean;
@@ -47,6 +50,8 @@ export default function UserProfileClient({
         isOwnProfile={isOwnProfile}
         avatarUrl={avatarUrl}
         onAvatarClick={handleAvatarClick}
+        followerCount={user.followerCount}
+        followingCount={user.followingCount}
       />
 
       <h2 className="text-lg font-semibold mt-6">Posts</h2>

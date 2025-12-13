@@ -6,6 +6,8 @@ export default function ProfileCard({
   avatarUrl,
   onAvatarClick,
   isOwnProfile,
+  followerCount,
+  followingCount,
 }: {
   user: {
     id: string;
@@ -18,6 +20,8 @@ export default function ProfileCard({
   avatarUrl?: string;
   onAvatarClick?: () => void;
   isOwnProfile?: boolean;
+    followerCount: number;
+    followingCount: number;
 }) {
   return (
     <div className="border rounded-md p-4 flex items-center gap-6">
@@ -54,10 +58,10 @@ export default function ProfileCard({
             <strong>{postCount}</strong> Posts
           </span>
           <span>
-            <strong>0</strong> Followers
+            <strong>{ followerCount}</strong> Followers
           </span>
           <span>
-            <strong>0</strong> Following
+            <strong>{followingCount}</strong> Following
           </span>
         </div>
       </div>
