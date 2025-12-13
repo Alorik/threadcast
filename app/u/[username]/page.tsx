@@ -14,7 +14,7 @@ export default async function UserProfile({
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const { username } = params;
+  const { username } = await params;
 
   const user = await prisma.user.findUnique({
     where: { username },
