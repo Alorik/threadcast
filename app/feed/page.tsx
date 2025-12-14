@@ -69,6 +69,8 @@ export default async function FeedPage() {
               </div>
               {post.mediaUrl && (
                 <Image
+                  width={768}
+                  height={400}
                   src={post.mediaUrl}
                   alt="Post media"
                   className="w-full rounded-md mt-2 max-h-80 object-cover"
