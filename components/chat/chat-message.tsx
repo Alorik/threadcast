@@ -22,11 +22,13 @@ export default function ChatMessage({
   initialMessages: Message[];
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
 
   useEffect(() => {
     const channelName = `private-conversation-${conversationId}`;
     const channel = pusherClient.subscribe(channelName);
 
+    // Listen for new messages
     channel.bind("new-message", (message: Message) => {
       setMessages((prev) => {
         if (prev.find((m) => m.id === message.id)) return prev;
@@ -34,7 +36,17 @@ export default function ChatMessage({
       });
     });
 
+    // Listen for typing indicators
+    channel.bind("typing:start", (data: { username: string }) => {
+      setTypingUser(data.username);
+    });
+
+    channel.bind("typing:stop", () => {
+      setTypingUser(null);
+    });
+
     return () => {
+      channel.unbind_all();
       pusherClient.unsubscribe(channelName);
     };
   }, [conversationId]);
@@ -53,7 +65,6 @@ export default function ChatMessage({
           <div className="flex-1">
             <div className="flex items-baseline gap-2">
               <p className="text-sm font-medium">{msg.sender.username}</p>
-              {/* ✅ Show timestamp */}
               <span className="text-xs text-gray-500">
                 {new Date(msg.createdAt).toLocaleTimeString([], {
                   hour: "2-digit",
@@ -65,6 +76,27 @@ export default function ChatMessage({
           </div>
         </div>
       ))}
+
+      {/* ✅ Typing Indicator */}
+      {typingUser && (
+        <div className="flex gap-2 items-center text-sm text-gray-500 italic">
+          <div className="flex gap-1">
+            <span
+              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            ></span>
+            <span
+              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            ></span>
+            <span
+              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            ></span>
+          </div>
+          <span>{typingUser} is typing...</span>
+        </div>
+      )}
     </div>
   );
 }
