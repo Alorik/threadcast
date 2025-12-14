@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import Image from "next/image";
 import { pusherClient } from "@/lib/pusher-client";
 import { useEffect, useState } from "react";
@@ -21,7 +21,6 @@ export default function ChatMessage({
   conversationId: string;
   initialMessages: Message[];
 }) {
-  
   const [messages, setMessages] = useState<Message[]>(initialMessages);
 
   useEffect(() => {
@@ -34,6 +33,7 @@ export default function ChatMessage({
         return [...prev, message];
       });
     });
+
     return () => {
       pusherClient.unsubscribe(channelName);
     };
@@ -44,14 +44,23 @@ export default function ChatMessage({
       {messages.map((msg) => (
         <div key={msg.id} className="flex gap-2">
           <Image
-            height={400}
-            width={400}
-            alt="img"
+            height={40}
+            width={40}
+            alt="avatar"
             src={msg.sender.avatarUrl || "/avatar.png"}
             className="w-8 h-8 rounded-full"
           />
-          <div>
-            <p className="text-sm font-medium">{msg.sender.username}</p>
+          <div className="flex-1">
+            <div className="flex items-baseline gap-2">
+              <p className="text-sm font-medium">{msg.sender.username}</p>
+              {/* ✅ Show timestamp */}
+              <span className="text-xs text-gray-500">
+                {new Date(msg.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
             <p className="text-sm">{msg.content}</p>
           </div>
         </div>

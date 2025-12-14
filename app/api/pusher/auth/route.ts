@@ -10,9 +10,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const formData = await req.json();
-  const socketId = formData.get("socket_id") as string;
-  const channel = formData.get("channel_name") as string;
+  // ✅ FIX: Read as FormData, not JSON
+  const body = await req.text(); // Get raw body
+  const params = new URLSearchParams(body);
+
+  const socketId = params.get("socket_id");
+  const channel = params.get("channel_name");
 
   if (!socketId || !channel) {
     return NextResponse.json({ error: "Invalid Request" }, { status: 400 });
@@ -33,3 +36,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(authResponse);
 }
+

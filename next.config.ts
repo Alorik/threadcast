@@ -12,12 +12,17 @@ const nextConfig = {
         hostname: "*.githubusercontent.com",
         pathname: "/**",
       },
-      // ✅ ADD THIS - for Supabase storage
       {
         protocol: "https",
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      // ❌ REMOVE THIS - it's just a placeholder comment
+      // {
+      //   protocol: "https",
+      //   hostname: "example.com",
+      //   pathname: "/**",
+      // },
     ],
   },
 };

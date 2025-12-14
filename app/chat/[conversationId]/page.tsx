@@ -6,17 +6,17 @@ import ChatMessage from "@/components/chat/chat-message";
 export default async function ChatPage({
   params,
 }: {
-  params: { conversationId: string };
+  params: Promise<{ conversationId: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return <div>Please login</div>;
   }
 
-  const { conversationId } = params;
+  const { conversationId } = await params;
 
   // 1️⃣ Fetch message history
-  const messages = await prisma.message.findMany({
+  const messagesFromDb = await prisma.message.findMany({
     where: { conversationId },
     include: {
       sender: {
@@ -29,6 +29,18 @@ export default async function ChatPage({
     },
     orderBy: { createdAt: "asc" },
   });
+
+  // ✅ Convert Date objects to ISO strings
+  const messages = messagesFromDb.map((msg) => ({
+    id: msg.id,
+    content: msg.content,
+    createdAt: msg.createdAt.toISOString(), // Date → string
+    sender: {
+      id: msg.sender.id,
+      username: msg.sender.username,
+      avatarUrl: msg.sender.avatarUrl,
+    },
+  }));
 
   return (
     <div className="max-w-3xl mx-auto p-4">
