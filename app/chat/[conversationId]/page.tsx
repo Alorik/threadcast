@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth/config";
 import ChatMessage from "@/components/chat/chat-message";
+import ChatLayout from "@/components/chat/chat-Layout";
+
 
 export default async function ChatPage({
   params,
@@ -43,11 +45,13 @@ export default async function ChatPage({
   }));
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
+    <div className="max-w-6xl mx-auto p-4">
       <h1 className="text-lg font-semibold mb-4">Chat</h1>
-
+      <ChatLayout
+        conversationId={conversationId}
+        initialMessages={messages}
+      />
       {/* 2️⃣ Realtime messages */}
-      <ChatMessage conversationId={conversationId} initialMessages={messages} />
     </div>
   );
 }
