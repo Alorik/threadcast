@@ -4,14 +4,17 @@ import { pusherClient } from "@/lib/pusher-client";
 import { useEffect, useState } from "react";
 import { Message } from "@/types/chat";
 
+interface ChatMessageProps {
+  conversationId: string;
+  initialMessages: Message[];
+  currentUserId: string; // ✅ Add this prop
+}
 
 export default function ChatMessage({
   conversationId,
   initialMessages,
-}: {
-  conversationId: string;
-  initialMessages: Message[];
-}) {
+  currentUserId,
+}: ChatMessageProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [typingUser, setTypingUser] = useState<string | null>(null);
 
@@ -43,51 +46,51 @@ export default function ChatMessage({
   }, [conversationId]);
 
   return (
-    <div className="space-y-3">
-      {messages.map((msg) => (
-        <div key={msg.id} className="flex gap-2">
-          <Image
-            height={40}
-            width={40}
-            alt="avatar"
-            src={msg.sender.avatarUrl || "/avatar.png"}
-            className="w-8 h-8 rounded-full"
-          />
-          <div className="flex-1">
-            <div className="flex items-baseline gap-2">
-              <p className="text-sm font-medium">{msg.sender.username}</p>
-              <span className="text-xs text-gray-500">
-                {new Date(msg.createdAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            </div>
-            <p className="text-sm">{msg.content}</p>
-          </div>
-        </div>
-      ))}
+    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1a1d29]">
+      {messages.map((msg) => {
+        const isCurrentUser = msg.sender.id === currentUserId;
 
-      {/* ✅ Typing Indicator */}
-      {typingUser && (
-        <div className="flex gap-2 items-center text-sm text-gray-500 italic">
-          <div className="flex gap-1">
-            <span
-              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-              style={{ animationDelay: "0ms" }}
-            ></span>
-            <span
-              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-              style={{ animationDelay: "150ms" }}
-            ></span>
-            <span
-              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-              style={{ animationDelay: "300ms" }}
-            ></span>
+        return (
+          <div
+            key={msg.id}
+            className={`flex gap-3 ${currentUserId}> "flex-row-reverse": "flex-row"`}
+          >
+            {/* //avatar */}
+            {!isCurrentUser && (
+              <div className="rounded-full w-10 h-10 bg-pink-500 flex items-center justify-center flex-shrink-0 text-white font-semibold">
+                {msg.sender.avatarUrl ? (
+                  <Image
+                    src={msg.sender.avatarUrl}
+                    alt={msg.sender.username}
+                    height={35}
+                    width={35}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  msg.sender.username[0].toLocaleUpperCase()
+                )}
+              </div>
+            )}
+
+            {/* Message bubble wrapper */}
+            <div
+              className={`flex flex-col max-w-[70%] ${
+                isCurrentUser ? "items-end" : "items-start"
+              }`}
+            >
+              <div
+                className={`px-4 py-3 rounded-2xl ${
+                  isCurrentUser
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded--sm"
+                    : "bg-[#2a2d3a] text-white rounded-tl-sm"
+                }`}
+              >
+                <p className="text-[15px] leading-relaxed">{msg.content}</p>
+              </div>
+            </div>
           </div>
-          <span>{typingUser} is typing...</span>
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 }
