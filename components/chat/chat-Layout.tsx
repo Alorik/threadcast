@@ -16,11 +16,12 @@ interface ChatLayoutProps {
 export default function ChatLayout({
   conversationId,
   initialMessages,
+  otherUser
 }: ChatLayoutProps) {
   return (
     <div className="">
       <div>
-        <ChatHeader />
+        <ChatHeader otherUser={otherUser} />
         <ChatMessage
           conversationId={conversationId}
           initialMessages={initialMessages}
