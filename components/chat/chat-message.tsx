@@ -3,7 +3,7 @@ import Image from "next/image";
 import { pusherClient } from "@/lib/pusher-client";
 import { useEffect, useState } from "react";
 import { Message } from "@/types/chat";
-
+import { CheckCheck } from "lucide-react";
 interface ChatMessageProps {
   conversationId: string;
   initialMessages: Message[];
@@ -45,52 +45,65 @@ export default function ChatMessage({
     };
   }, [conversationId]);
 
-  return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1a1d29]">
-      {messages.map((msg) => {
-        const isCurrentUser = msg.sender.id === currentUserId;
+return (
+  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1a1d29]">
+    {messages.map((msg) => {
+      const isCurrentUser = msg.sender.id === currentUserId;
+      const time = new Date(msg.createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 
-        return (
+      return (
+        <div
+          key={msg.id}
+          className={`flex gap-3 ${
+            isCurrentUser ? "flex-row-reverse" : "flex-row"
+          }`}
+        >
+          {/* Avatar */}
+          {!isCurrentUser && (
+            <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center flex-shrink-0 text-white font-semibold">
+              {msg.sender.avatarUrl ? (
+                <img
+                  src={msg.sender.avatarUrl}
+                  alt={msg.sender.username}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                msg.sender.username[0].toUpperCase()
+              )}
+            </div>
+          )}
+
+          {/* Message bubble wrapper */}
           <div
-            key={msg.id}
-            className={`flex gap-3 ${currentUserId}> "flex-row-reverse": "flex-row"`}
+            className={`flex flex-col max-w-[70%] ${
+              isCurrentUser ? "items-end" : "items-start"
+            }`}
           >
-            {/* //avatar */}
-            {!isCurrentUser && (
-              <div className="rounded-full w-10 h-10 bg-pink-500 flex items-center justify-center flex-shrink-0 text-white font-semibold">
-                {msg.sender.avatarUrl ? (
-                  <Image
-                    src={msg.sender.avatarUrl}
-                    alt={msg.sender.username}
-                    height={35}
-                    width={35}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  msg.sender.username[0].toLocaleUpperCase()
-                )}
-              </div>
-            )}
-
-            {/* Message bubble wrapper */}
+            {/* The bubble */}
             <div
-              className={`flex flex-col max-w-[70%] ${
-                isCurrentUser ? "items-end" : "items-start"
+              className={`px-4 py-3 rounded-2xl ${
+                isCurrentUser
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-tr-sm"
+                  : "bg-[#2a2d3a] text-white rounded-tl-sm"
               }`}
             >
-              <div
-                className={`px-4 py-3 rounded-2xl ${
-                  isCurrentUser
-                    ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded--sm"
-                    : "bg-[#2a2d3a] text-white rounded-tl-sm"
-                }`}
-              >
-                <p className="text-[15px] leading-relaxed">{msg.content}</p>
-              </div>
+              <p className="text-[15px] leading-relaxed">{msg.content}</p>
+            </div>
+
+            {/* Time and checkmarks */}
+            <div className="flex items-center gap-1 mt-1 px-2">
+              <span className="text-xs text-gray-400">{time}</span>
+              {isCurrentUser && (
+                <CheckCheck size={14} className="text-cyan-400" />
+              )}
             </div>
           </div>
-        );
-      })}
-    </div>
-  );
+        </div>
+      );
+    })}
+  </div>
+);
 }
