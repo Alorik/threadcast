@@ -1,10 +1,13 @@
 "use client"
 
 
+
 export default function ChatPage() {
   return (
-    <div>
-      
+    <div className="">
+      <div>
+        
+      </div>
     </div>
-  )
+  );
 }
