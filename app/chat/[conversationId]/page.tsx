@@ -83,6 +83,7 @@ export default async function ChatPage({
         otherUser={otherUser}
         conversationId={conversationId}
         initialMessages={messages}
+        currentUserId={session.user.id}
       />
       {/* 2️⃣ Realtime messages */}
     </div>

@@ -1,23 +1,17 @@
-"use client"
+"use client";
 
 import Image from "next/image";
-import {
-  MoreVertical,
-  Phone,
-  Video,
-} from "lucide-react";
+import { MoreVertical, Phone, Video } from "lucide-react";
 
 type ChatHeaderProps = {
   otherUser: {
     id: string;
     avatarUrl: string | null;
     username: string;
-  }
-}
+  }| null;
+};
 
-export default function ChatHeader({otherUser}: ChatHeaderProps) {
-  
-
+export default function ChatHeader({ otherUser }: ChatHeaderProps) {
   return (
     <div className="h-20 border border-white/20 flex items-center overflow-hidden max-w-3xl bg-slate-950">
       <div className="flex items-center justify-between w-full px-4">

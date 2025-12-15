@@ -2,17 +2,8 @@
 import Image from "next/image";
 import { pusherClient } from "@/lib/pusher-client";
 import { useEffect, useState } from "react";
+import { Message } from "@/types/chat";
 
-type Message = {
-  id: string;
-  content: string;
-  createdAt: string;
-  sender: {
-    id: string;
-    username: string;
-    avatarUrl?: string | null;
-  };
-};
 
 export default function ChatMessage({
   conversationId,

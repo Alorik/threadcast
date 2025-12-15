@@ -2,21 +2,23 @@
 
 import ChatHeader from "./chat-header";
 import ChatMessage from "./chat-message";
-
+import { Message } from "@/types/chat";
 interface ChatLayoutProps {
   conversationId: string;
-  initialMessages: any[];
+  initialMessages: Message[];
   otherUser: {
     id: string;
     username: string;
     avatarUrl: string | null;
   } | null;
+  currentUserId: string;
 }
 
 export default function ChatLayout({
   conversationId,
   initialMessages,
-  otherUser
+  otherUser,
+  currentUserId
 }: ChatLayoutProps) {
   return (
     <div className="">
@@ -25,6 +27,7 @@ export default function ChatLayout({
         <ChatMessage
           conversationId={conversationId}
           initialMessages={initialMessages}
+          currentUserId={currentUserId}
         />
       </div>
     </div>
