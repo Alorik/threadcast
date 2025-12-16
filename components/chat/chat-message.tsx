@@ -46,7 +46,7 @@ export default function ChatMessage({
   }, [conversationId]);
 
 return (
-  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1a1d29]">
+  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1a1d29] min-h-[calc(100vh-240px)]">
     {messages.map((msg) => {
       const isCurrentUser = msg.sender.id === currentUserId;
       const time = new Date(msg.createdAt).toLocaleTimeString([], {

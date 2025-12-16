@@ -23,8 +23,8 @@ export default function ChatLayout({
   currentUserId
 }: ChatLayoutProps) {
   return (
-    <div className="">
-      <div>
+    <div className="flex w-full  max-w-3xl px-4">
+      <div className="w-full">
         <ChatHeader otherUser={otherUser} />
         <ChatMessage
           conversationId={conversationId}
