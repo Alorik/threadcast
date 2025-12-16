@@ -10,10 +10,12 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ conversationId }: ChatInputProps) {
+  console.log("🔑 ChatInput conversationId:", conversationId); 
   const [inputValue, setInputValue] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null); // ✅ Add typing timeout ref
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -29,7 +31,6 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Handle typing indicator
   function handleTyping() {
     pusherClient.send_event(
       "typing:start",
@@ -50,42 +51,60 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     }, 1500);
   }
 
-  // ✅ Send message to database
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+const sendMessage = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!inputValue.trim() || isSending) return;
 
-    try {
-      // Send message to your API
-      const response = await fetch("/api/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          conversationId,
-          content: inputValue,
-        }),
-      });
+  setIsSending(true);
+  const messageContent = inputValue;
+  setInputValue("");
 
-      if (response.ok) {
-        setInputValue(""); // Clear input after successful send
-        setShowEmojiPicker(false);
+  console.log("📤 Sending message:", {
+    conversationId,
+    content: messageContent,
+  }); // ✅ Debug log
 
-        // Stop typing indicator
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-        pusherClient.send_event(
-          "typing:stop",
-          {},
-          `private-conversation-${conversationId}`
-        );
-      }
-    } catch (error) {
-      console.error("Failed to send message:", error);
+  try {
+    const response = await fetch("/api/chat/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        conversationId,
+        content: messageContent,
+      }),
+    });
+
+    console.log("📥 Response status:", response.status); // ✅ Debug log
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("❌ Error response:", errorData); // ✅ Debug log
+      throw new Error("Failed to send message");
     }
-  };
+
+    const data = await response.json();
+    console.log("✅ Success:", data); // ✅ Debug log
+
+    setShowEmojiPicker(false);
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    pusherClient.send_event(
+      "typing:stop",
+      {},
+      `private-conversation-${conversationId}`
+    );
+  } catch (error) {
+    console.error("Failed to send message:", error);
+    setInputValue(messageContent);
+    alert("Failed to send message. Please try again.");
+  } finally {
+    setIsSending(false);
+  }
+};
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setInputValue((prev) => prev + emojiData.emoji);
@@ -106,11 +125,12 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
             value={inputValue}
             onChange={(e) => {
               setInputValue(e.target.value);
-              handleTyping(); // ✅ Trigger typing indicator
+              handleTyping();
             }}
             type="text"
             placeholder="Type a message..."
-            className="flex-1 bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 h-10 py-2.5 text-sm"
+            disabled={isSending}
+            className="flex-1 bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 h-10 py-2.5 text-sm disabled:opacity-50"
           />
           <div className="flex items-center justify-center gap-2">
             <div className="relative" ref={emojiPickerRef}>
@@ -134,14 +154,18 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
 
             <button
               type="submit"
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() || isSending}
               className="p-2.5 rounded-xl bg-cyan-500 text-white hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 transition-colors shadow-lg shadow-cyan-500/20"
             >
-              <Send
-                size={14}
-                fill="currentColor"
-                className="items-center flex"
-              />
+              {isSending ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Send
+                  size={14}
+                  fill="currentColor"
+                  className="items-center flex"
+                />
+              )}
             </button>
           </div>
         </form>

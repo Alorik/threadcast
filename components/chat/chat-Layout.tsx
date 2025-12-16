@@ -1,8 +1,10 @@
 "use client";
 
 import ChatHeader from "./chat-header";
+
 import ChatMessage from "./chat-message";
 import { Message } from "@/types/chat";
+import ChatInput from "./chat-typing";
 interface ChatLayoutProps {
   conversationId: string;
   initialMessages: Message[];
@@ -29,6 +31,7 @@ export default function ChatLayout({
           initialMessages={initialMessages}
           currentUserId={currentUserId}
         />
+        <ChatInput conversationId={conversationId} />
       </div>
     </div>
   );
