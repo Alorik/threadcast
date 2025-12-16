@@ -1,3 +1,4 @@
+//api/chat/conversations/route.ts
 import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -18,10 +19,19 @@ export async function GET() {
     const userId = session.user.id;
     console.log("🔵 API: Fetching conversations for user:", userId);
 
+    // First, let's check if there are any conversation members for this user
+    const memberCheck = await prisma.conversationMember.findMany({
+      where: { userId },
+      select: { conversationId: true },
+    });
+    console.log("🔍 Member check - User is in conversations:", memberCheck);
+
     const conversations = await prisma.conversation.findMany({
       where: {
         members: {
-          some: { userId },
+          some: {
+            userId: userId,
+          },
         },
       },
       include: {
@@ -39,6 +49,11 @@ export async function GET() {
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+          },
         },
       },
       orderBy: {
@@ -47,12 +62,27 @@ export async function GET() {
     });
 
     console.log("✅ API: Found conversations:", conversations.length);
-    console.log(
-      "✅ API: Conversations:",
-      JSON.stringify(conversations, null, 2)
-    );
 
-    return NextResponse.json(conversations);
+    // More detailed logging
+    if (conversations.length > 0) {
+      console.log("✅ API: First conversation details:", {
+        id: conversations[0].id,
+        memberCount: conversations[0].members.length,
+        messageCount: conversations[0].messages.length,
+        members: conversations[0].members.map((m) => ({
+          userId: m.userId,
+          username: m.user.username,
+        })),
+      });
+    }
+
+    // Format the response to ensure messages array is always present
+    const formattedConversations = conversations.map((conv) => ({
+      ...conv,
+      messages: conv.messages || [],
+    }));
+
+    return NextResponse.json(formattedConversations);
   } catch (error) {
     console.error("❌ API Error:", error);
     return NextResponse.json(

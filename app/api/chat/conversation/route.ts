@@ -1,3 +1,4 @@
+///api/chat/conversation/route.ts
 import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -59,7 +60,6 @@ export async function POST(req: NextRequest) {
       members: true,
     },
   });
-  
 
   return NextResponse.json(conversation, { status: 201 });
 }

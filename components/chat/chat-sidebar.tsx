@@ -1,3 +1,4 @@
+//chat-sidebar.tsx
 "use client";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -33,21 +34,36 @@ export default function ChatSidebar() {
   const activeId = pathname?.split("/").pop();
 
   useEffect(() => {
-    // Fetch current user
-    fetch("/api/auth/session")
-      .then((res) => res.json())
-      .then((session) => {
+    const fetchData = async () => {
+      try {
+        // Fetch current user
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
         setCurrentUserId(session?.user?.id);
-      });
 
-    // Fetch conversations
-    fetch("/api/chat/conversations")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("📦 Conversations:", data); // ✅ Debug log
+        // Fetch conversations
+        const convRes = await fetch("/api/chat/conversations");
+        const data = await convRes.json();
+
+        console.log("📦 Conversations from API:", data);
+        console.log("📊 Number of conversations:", data.length);
+
+        if (data.length > 0) {
+          console.log("✅ First conversation:", data[0]);
+          console.log("👥 Members:", data[0].members);
+          console.log("💬 Messages:", data[0].messages);
+        }
+
+        // ✅ FIX: Set conversations in state
         setConversations(data);
-      })
-      .finally(() => setLoading(false));
+      } catch (error) {
+        console.error("❌ Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   // Get other user from conversation

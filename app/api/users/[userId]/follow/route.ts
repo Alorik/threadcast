@@ -1,3 +1,4 @@
+//api/users/[userId]/follow
 import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";

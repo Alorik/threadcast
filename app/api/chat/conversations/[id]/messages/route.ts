@@ -1,127 +1,120 @@
+//api/chat/messages/route.ts
 import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
+import { pusherServer } from "@/lib/pusher-server";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+
+export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Await params to get the id
-    const { id: conversationId } = await params;
-    const { content } = await req.json();
+    const body = await req.json();
+    console.log("📦 Received body:", body);
 
-    if (!content || content.trim().length === 0) {
+    const { conversationId, content } = body;
+
+    console.log("🔍 Validation:", {
+      conversationId,
+      content,
+      hasConversationId: !!conversationId,
+      hasContent: !!content,
+    });
+
+    if (!conversationId || !content) {
       return NextResponse.json(
-        { error: "Message content is required" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
     // Verify user is a member of this conversation
-    const membership = await prisma.conversationMember.findFirst({
+    const conversation = await prisma.conversation.findFirst({
       where: {
-        conversationId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!membership) {
-      return NextResponse.json(
-        { error: "You are not a member of this conversation" },
-        { status: 403 }
-      );
-    }
-
-    // Create the message - use senderId instead of userId
-    const message = await prisma.message.create({
-      data: {
-        content: content.trim(),
-        conversationId,
-        senderId: session.user.id, // Changed from userId to senderId
-      },
-      include: {
-        sender: {
-          // Changed from user to sender
-          select: {
-            id: true,
-            username: true,
-            avatarUrl: true,
+        id: conversationId,
+        members: {
+          some: {
+            userId: session.user.id,
           },
         },
       },
     });
 
-    return NextResponse.json(message, { status: 201 });
-  } catch (error) {
-    console.error("Message creation error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "Conversation not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    console.log("✅ Creating message...");
+
+    // Create message and update conversation in a transaction
+    const message = await prisma.$transaction(async (tx) => {
+      // Create the message
+      const newMessage = await tx.message.create({
+        data: {
+          content,
+          conversationId,
+          senderId: session.user.id,
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      });
+
+      // Update conversation's updatedAt timestamp
+      await tx.conversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      });
+
+      return newMessage;
+    });
+
+    console.log("✅ Message created:", message.id);
+
+    // Trigger Pusher event
+    await pusherServer.trigger(
+      `conversation-${conversationId}`,
+      "new-message",
+      {
+        id: message.id,
+        content: message.content,
+        createdAt: message.createdAt.toISOString(),
+        sender: message.sender,
+      }
     );
-  }
-}
 
-// GET messages for a conversation
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    console.log("✅ Message sent via Pusher");
 
-    // Await params to get the id
-    const { id: conversationId } = await params;
-
-    // Verify user is a member
-    const membership = await prisma.conversationMember.findFirst({
-      where: {
-        conversationId,
-        userId: session.user.id,
-      },
-    });
-
-    if (!membership) {
-      return NextResponse.json(
-        { error: "You are not a member of this conversation" },
-        { status: 403 }
-      );
-    }
-
-    // Get messages
-    const messages = await prisma.message.findMany({
-      where: {
-        conversationId,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-      include: {
-        sender: {
-          // Changed from user to sender
-          select: {
-            id: true,
-            username: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(messages);
-  } catch (error) {
-    console.error("Messages fetch error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        id: message.id,
+        content: message.content,
+        createdAt: message.createdAt.toISOString(),
+        sender: message.sender,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("❌ Error creating message:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to send message",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
