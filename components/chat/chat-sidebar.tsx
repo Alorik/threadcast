@@ -1,0 +1,177 @@
+"use client";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import { Search, Plus } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+
+type Conversation = {
+  id: string;
+  updatedAt: string;
+  members: {
+    userId: string;
+    user: {
+      id: string;
+      username: string;
+      avatarUrl: string | null;
+    };
+  }[];
+  messages: {
+    id: string;
+    content: string;
+    createdAt: string;
+  }[];
+};
+
+export default function ChatSidebar() {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const activeId = pathname?.split("/").pop();
+
+  useEffect(() => {
+    // Fetch current user
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((session) => {
+        setCurrentUserId(session?.user?.id);
+      });
+
+    // Fetch conversations
+    fetch("/api/chat/conversations")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("📦 Conversations:", data); // ✅ Debug log
+        setConversations(data);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Get other user from conversation
+  const getOtherUser = (conv: Conversation) => {
+    const otherMember = conv.members.find((m) => m.userId !== currentUserId);
+    return (
+      otherMember?.user || {
+        id: "unknown",
+        username: "Unknown User",
+        avatarUrl: null,
+      }
+    );
+  };
+
+  const filtered = conversations.filter((conv) => {
+    const otherUser = getOtherUser(conv);
+    return otherUser.username.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  return (
+    <div className="h-full flex flex-col bg-[#0f1115] p-4">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-white">Messages</h2>
+        <button
+          className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors"
+          onClick={() => router.push("/users")}
+        >
+          <Plus size={18} />
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search
+          size={16}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+        />
+        <input
+          className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          placeholder="Search chats..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      {/* List */}
+      <div className="flex-1 space-y-2 overflow-y-auto">
+        {loading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 animate-pulse"
+              >
+                <div className="w-12 h-12 rounded-full bg-slate-700" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-slate-700 rounded w-3/4" />
+                  <div className="h-3 bg-slate-700 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-8 text-slate-500">
+            <p className="text-sm">
+              {searchQuery ? "No conversations found" : "No conversations yet"}
+            </p>
+            <p className="text-xs mt-2">
+              {searchQuery
+                ? "Try a different search"
+                : "Start chatting with someone!"}
+            </p>
+          </div>
+        ) : (
+          filtered.map((conv) => {
+            const otherUser = getOtherUser(conv);
+            const lastMessage = conv.messages[0]; // messages are sorted by createdAt desc
+
+            return (
+              <button
+                key={conv.id}
+                onClick={() => router.push(`/chat/${conv.id}`)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                  activeId === conv.id
+                    ? "bg-white/10 border border-white/5"
+                    : "hover:bg-white/5"
+                }`}
+              >
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center overflow-hidden">
+                    {otherUser.avatarUrl ? (
+                      <Image
+                        height={48}
+                        width={48}
+                        alt={otherUser.username}
+                        src={otherUser.avatarUrl}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white font-bold text-lg">
+                        {otherUser.username.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  {/* Online indicator */}
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#0f1115] rounded-full" />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">
+                    {otherUser.username}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">
+                    {lastMessage?.content || "No messages yet"}
+                  </p>
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
