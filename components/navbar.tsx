@@ -39,16 +39,11 @@ export default function ResponsiveSidebar() {
       <aside className="hidden md:flex fixed left-0 top-0 z-40 h-screen w-72 flex-col border-r border-white/10 bg-slate-900/50 backdrop-blur-xl px-4 py-6">
         {/* Logo Area */}
         <div className="flex items-center gap-3 px-4 mb-10">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-            <Command size={20} />
-          </div>
+
           <div>
             <h1 className="font-bold text-lg text-white tracking-tight">
-              Nexus
+             ThreadCast
             </h1>
-            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">
-              Workspace
-            </p>
           </div>
         </div>
 
