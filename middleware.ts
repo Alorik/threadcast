@@ -32,4 +32,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 }
-a
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image).*)"],
+};
