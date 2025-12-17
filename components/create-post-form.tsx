@@ -72,7 +72,7 @@ export default function CreatePostForm() {
       <button
         type="submit"
         disabled={loading}
-        className="px-4 py-2 border rounded"
+        className="px-2  border rounded text-sm"
       >
         {loading ? "Posting..." : "Post"}
       </button>

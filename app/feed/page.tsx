@@ -54,8 +54,8 @@ export default async function FeedPage() {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-rose-600/10 rounded-full blur-[120px]" />
         <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
-
-      <div className="relative z-10 max-w-2xl mx-auto py-10 px-4">
+      <div className="flex items-center justify-between">
+         <div className="relative z-10 max-w-2xl mx-auto py-10 px-4">
         {/* Header */}
         <header className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-rose-400 bg-clip-text text-transparent tracking-tight">
@@ -204,7 +204,12 @@ export default async function FeedPage() {
             </article>
           ))}
         </div>
-      </div>
+        </div>
+        <div>
+          <Resp
+        </div>
+</div>
+     
     </div>
   );
 }
