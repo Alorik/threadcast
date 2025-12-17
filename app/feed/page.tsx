@@ -76,9 +76,7 @@ export default async function FeedPage() {
           </header>
 
           {/* Create Post Section */}
-          <section className="mb-10 rounded-3xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl shadow-xl">
-            <CreatePostForm />
-          </section>
+   
 
           {/* Feed List */}
           <div className="space-y-6">
