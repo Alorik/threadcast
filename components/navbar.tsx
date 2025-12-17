@@ -1,6 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { motion } from "framer-motion";
+
 import {
   Home,
   Search,
@@ -13,36 +16,48 @@ import {
   Plus,
 } from "lucide-react";
 
-/**
- * Responsive Navigation
- * * Mechanics:
- * 1. Desktop: Vertical Sidebar (h-screen, w-64, border-r).
- * 2. Mobile: Horizontal Bottom Bar (h-16, w-full, border-t, fixed bottom).
- * 3. Active State: Uses Framer Motion's 'layoutId' for a smooth sliding background/indicator.
- */
-
 const navItems = [
-  { id: "home", label: "Home", icon: Home },
-  { id: "search", label: "Explore", icon: Search },
-  { id: "notifications", label: "Activity", icon: Bell, badge: 3 },
-  { id: "messages", label: "Messages", icon: Mail },
+  { id: "home", label: "Home", icon: Home, href: "/" },
+  { id: "search", label: "Explore", icon: Search, href: "/explore" },
+  {
+    id: "notifications",
+    label: "Activity",
+    icon: Bell,
+    badge: 3,
+    href: "/activity",
+  },
+  { id: "messages", label: "Messages", icon: Mail, href: "/messages" },
   { id: "profile", label: "Profile", icon: User },
-  { id: "create", label: "Create", icon: Plus },
+  { id: "create", label: "Create", icon: Plus, href: "/create" },
 ];
 
 export default function ResponsiveSidebar() {
+  const { data: session } = useSession();
+  const username = session?.user?.username;
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("home");
+const handleNavigation = (item: any) => {
+  setActiveTab(item.id);
 
+  if (item.id === "profile") {
+    if (!username) return;
+    router.push(`/u/${username}`);
+    return;
+  }
+
+  if (item.href) {
+    router.push(item.href);
+  }
+};
   return (
     <>
       {/* --- DESKTOP SIDEBAR (Hidden on mobile) --- */}
       <aside className="hidden md:flex fixed left-0 top-0 z-40 h-screen w-72 flex-col border-r border-white/10 bg-slate-900/50 backdrop-blur-xl px-4 py-6">
         {/* Logo Area */}
         <div className="flex items-center gap-3 px-4 mb-10">
-
           <div>
             <h1 className="font-bold text-lg text-white tracking-tight">
-             ThreadCast
+              ThreadCast
             </h1>
           </div>
         </div>
@@ -52,7 +67,7 @@ export default function ResponsiveSidebar() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleNavigation(item)}
               className="relative w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group"
             >
               {activeTab === item.id && (
@@ -110,7 +125,7 @@ export default function ResponsiveSidebar() {
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => handleNavigation(item)}
             className="relative flex flex-col items-center justify-center w-full h-full gap-1 pt-2 group"
           >
             {activeTab === item.id && (
