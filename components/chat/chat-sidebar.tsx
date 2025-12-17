@@ -20,6 +20,7 @@ type Conversation = {
     id: string;
     content: string;
     createdAt: string;
+    senderId: string;
   }[];
 };
 
@@ -54,7 +55,7 @@ export default function ChatSidebar() {
           console.log("💬 Messages:", data[0].messages);
         }
 
-        // ✅ FIX: Set conversations in state
+        // ✅ Set conversations in state (API already filters to only conversations with messages)
         setConversations(data);
       } catch (error) {
         console.error("❌ Error fetching data:", error);
@@ -76,6 +77,29 @@ export default function ChatSidebar() {
         avatarUrl: null,
       }
     );
+  };
+
+  // Format timestamp to show relative time (e.g., "2h", "Yesterday", "3d")
+  const formatTimestamp = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+    if (diffInHours < 1) {
+      const diffInMins = Math.floor(diffInMs / (1000 * 60));
+      return diffInMins < 1 ? "now" : `${diffInMins}m`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h`;
+    } else if (diffInDays < 7) {
+      return `${Math.floor(diffInDays)}d`;
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    }
   };
 
   const filtered = conversations.filter((conv) => {
@@ -142,6 +166,10 @@ export default function ChatSidebar() {
           filtered.map((conv) => {
             const otherUser = getOtherUser(conv);
             const lastMessage = conv.messages[0]; // messages are sorted by createdAt desc
+            const isLastMessageFromMe = lastMessage?.senderId === currentUserId;
+            const timestamp = lastMessage
+              ? formatTimestamp(lastMessage.createdAt)
+              : "";
 
             return (
               <button
@@ -155,11 +183,11 @@ export default function ChatSidebar() {
               >
                 {/* Avatar */}
                 <div className="relative shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center overflow-hidden">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center overflow-hidden">
                     {otherUser.avatarUrl ? (
                       <Image
-                        height={48}
-                        width={48}
+                        height={56}
+                        width={56}
                         alt={otherUser.username}
                         src={otherUser.avatarUrl}
                         className="w-full h-full object-cover"
@@ -170,17 +198,31 @@ export default function ChatSidebar() {
                       </span>
                     )}
                   </div>
-                  {/* Online indicator */}
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#0f1115] rounded-full" />
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {otherUser.username}
-                  </p>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {otherUser.username}
+                    </p>
+                    {timestamp && (
+                      <span className="text-xs text-slate-500 shrink-0">
+                        {timestamp}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-400 truncate">
-                    {lastMessage?.content || "No messages yet"}
+                    {lastMessage ? (
+                      <>
+                        {isLastMessageFromMe && (
+                          <span className="text-slate-500">You: </span>
+                        )}
+                        {lastMessage.content}
+                      </>
+                    ) : (
+                      "No messages yet"
+                    )}
                   </p>
                 </div>
               </button>

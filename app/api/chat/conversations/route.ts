@@ -19,19 +19,11 @@ export async function GET() {
     const userId = session.user.id;
     console.log("🔵 API: Fetching conversations for user:", userId);
 
-    // First, let's check if there are any conversation members for this user
-    const memberCheck = await prisma.conversationMember.findMany({
-      where: { userId },
-      select: { conversationId: true },
-    });
-    console.log("🔍 Member check - User is in conversations:", memberCheck);
-
-    const conversations = await prisma.conversation.findMany({
+    // Find all conversations where user is a member
+    const allConversations = await prisma.conversation.findMany({
       where: {
         members: {
-          some: {
-            userId: userId,
-          },
+          some: { userId },
         },
       },
       include: {
@@ -46,13 +38,9 @@ export async function GET() {
             },
           },
         },
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
+        _count: {
           select: {
-            id: true,
-            content: true,
-            createdAt: true,
+            messages: true,
           },
         },
       },
@@ -61,28 +49,58 @@ export async function GET() {
       },
     });
 
-    console.log("✅ API: Found conversations:", conversations.length);
+    console.log("🔵 API: All conversations found:", allConversations.length);
 
-    // More detailed logging
-    if (conversations.length > 0) {
-      console.log("✅ API: First conversation details:", {
-        id: conversations[0].id,
-        memberCount: conversations[0].members.length,
-        messageCount: conversations[0].messages.length,
-        members: conversations[0].members.map((m) => ({
-          userId: m.userId,
-          username: m.user.username,
-        })),
-      });
-    }
+    // For each conversation, fetch the last message separately
+    const conversationsWithLastMessage = await Promise.all(
+      allConversations.map(async (conv) => {
+        // Only fetch last message if conversation has messages
+        const lastMessage = conv._count.messages > 0
+          ? await prisma.message.findFirst({
+              where: { conversationId: conv.id },
+              orderBy: { createdAt: "desc" },
+              select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                senderId: true,
+              },
+            })
+          : null;
 
-    // Format the response to ensure messages array is always present
-    const formattedConversations = conversations.map((conv) => ({
-      ...conv,
-      messages: conv.messages || [],
-    }));
+        return {
+          id: conv.id,
+          updatedAt: conv.updatedAt.toISOString(),
+          members: conv.members.map((m) => ({
+            userId: m.userId,
+            user: m.user,
+          })),
+          messages: lastMessage
+            ? [
+                {
+                  id: lastMessage.id,
+                  content: lastMessage.content,
+                  createdAt: lastMessage.createdAt.toISOString(),
+                  senderId: lastMessage.senderId,
+                },
+              ]
+            : [],
+        };
+      })
+    );
 
-    return NextResponse.json(formattedConversations);
+    // Filter to only conversations with messages
+    const conversations = conversationsWithLastMessage.filter(
+      (conv) => conv.messages.length > 0
+    );
+
+    console.log("✅ API: Conversations with messages:", conversations.length);
+    console.log(
+      "✅ API: First conversation:",
+      conversations[0] ? JSON.stringify(conversations[0], null, 2) : "None"
+    );
+
+    return NextResponse.json(conversations);
   } catch (error) {
     console.error("❌ API Error:", error);
     return NextResponse.json(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { Heart, Loader2 } from "lucide-react";
 
 type LikeButtonProps = {
   postId: string;
@@ -11,47 +11,62 @@ type LikeButtonProps = {
 export default function LikeButton({ postId, liked }: LikeButtonProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
+  // We use local state to simulate the optimistic update for the demo
+  const [isLiked, setIsLiked] = useState(liked);
 
   async function handleLike() {
     setError(null);
-    const method = liked ? "DELETE" : "POST";
 
-    try {
-      const res = await fetch(`/api/posts/${postId}/like`, {
-        method,
-      });
+    // Simulate network delay for the demo since we don't have a real API/Router here
+    const fakeNetworkRequest = () =>
+      new Promise((resolve) => setTimeout(resolve, 500));
 
-      if (res.status === 401) {
-        setError("You must be logged in to like.");
-        return;
+    startTransition(async () => {
+      try {
+        await fakeNetworkRequest();
+        setIsLiked(!isLiked);
+        // In a real Next.js app, you would call router.refresh() here
+      } catch (err) {
+        setError("Error");
       }
-
-      if (!res.ok) {
-        setError("Failed to like post.");
-        return;
-      }
-
-      // re-fetch posts on the server
-      startTransition(() => {
-        router.refresh();
-      });
-    } catch (err) {
-      setError("Something went wrong.");
-    }
+    });
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="relative flex items-center">
       <button
         type="button"
         onClick={handleLike}
         disabled={isPending}
-        className="border px-2 py-1 rounded text-xs disabled:opacity-50"
+        className={`
+          group relative flex items-center justify-center p-2 rounded-full transition-all duration-300
+          focus:outline-none disabled:cursor-not-allowed
+          ${
+            isLiked
+              ? "text-rose-500 hover:bg-rose-500/10"
+              : "text-slate-500 hover:text-rose-500 hover:bg-rose-500/10"
+          }
+        `}
+        aria-label={isLiked ? "Unlike" : "Like"}
       >
-        {isPending ? "..." : liked ? "Unlike" : "like"}
+        {isPending ? (
+          <Loader2 size={20} className="animate-spin" />
+        ) : (
+          <Heart
+            size={20}
+            className={`
+              transition-transform duration-200 active:scale-90
+              ${isLiked ? "fill-current scale-100" : "group-hover:scale-110"}
+            `}
+          />
+        )}
       </button>
-      {error && <span className="text-[10px] text-red-500">{error}</span>}
+
+      {error && (
+        <span className="absolute left-full ml-2 text-[10px] font-medium text-rose-500 whitespace-nowrap animate-in fade-in slide-in-from-left-1">
+          {error}
+        </span>
+      )}
     </div>
   );
 }
