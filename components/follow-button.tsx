@@ -34,6 +34,7 @@ export default function FollowButton({
           : "bg-blue-500 text-white hover:bg-blue-600"
       }`}
     >
+      
       {loading
         ? "Loading..."
         : isFollowing

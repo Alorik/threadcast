@@ -19,8 +19,7 @@ export async function GET() {
     const userId = session.user.id;
     console.log("🔵 API: Fetching conversations for user:", userId);
 
-    // Find all conversations where user is a member
-    const allConversations = await prisma.conversation.findMany({
+    const conversations = await prisma.conversation.findMany({
       where: {
         members: {
           some: { userId },
@@ -38,9 +37,14 @@ export async function GET() {
             },
           },
         },
-        _count: {
+        messages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
           select: {
-            messages: true,
+            id: true,
+            content: true,
+            createdAt: true,
+            senderId: true,
           },
         },
       },
@@ -49,55 +53,10 @@ export async function GET() {
       },
     });
 
-    console.log("🔵 API: All conversations found:", allConversations.length);
-
-    // For each conversation, fetch the last message separately
-    const conversationsWithLastMessage = await Promise.all(
-      allConversations.map(async (conv) => {
-        // Only fetch last message if conversation has messages
-        const lastMessage = conv._count.messages > 0
-          ? await prisma.message.findFirst({
-              where: { conversationId: conv.id },
-              orderBy: { createdAt: "desc" },
-              select: {
-                id: true,
-                content: true,
-                createdAt: true,
-                senderId: true,
-              },
-            })
-          : null;
-
-        return {
-          id: conv.id,
-          updatedAt: conv.updatedAt.toISOString(),
-          members: conv.members.map((m) => ({
-            userId: m.userId,
-            user: m.user,
-          })),
-          messages: lastMessage
-            ? [
-                {
-                  id: lastMessage.id,
-                  content: lastMessage.content,
-                  createdAt: lastMessage.createdAt.toISOString(),
-                  senderId: lastMessage.senderId,
-                },
-              ]
-            : [],
-        };
-      })
-    );
-
-    // Filter to only conversations with messages
-    const conversations = conversationsWithLastMessage.filter(
-      (conv) => conv.messages.length > 0
-    );
-
-    console.log("✅ API: Conversations with messages:", conversations.length);
+    console.log("✅ API: Found conversations:", conversations.length);
     console.log(
-      "✅ API: First conversation:",
-      conversations[0] ? JSON.stringify(conversations[0], null, 2) : "None"
+      "✅ API: Conversations:",
+      JSON.stringify(conversations, null, 2)
     );
 
     return NextResponse.json(conversations);

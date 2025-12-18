@@ -36,19 +36,19 @@ export default function ResponsiveSidebar() {
   const username = session?.user?.username;
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("home");
-const handleNavigation = (item: any) => {
-  setActiveTab(item.id);
+  const handleNavigation = (item: any) => {
+    setActiveTab(item.id);
 
-  if (item.id === "profile") {
-    if (!username) return;
-    router.push(`/u/${username}`);
-    return;
-  }
+    if (item.id === "profile") {
+      if (!username) return;
+      router.push(`/u/${username}`);
+      return;
+    }
 
-  if (item.href) {
-    router.push(item.href);
-  }
-};
+    if (item.href) {
+      router.push(item.href);
+    }
+  };
   return (
     <>
       {/* --- DESKTOP SIDEBAR (Hidden on mobile) --- */}

@@ -163,6 +163,7 @@ export default function ChatPage() {
                     onClick={() => router.push(`/chat/${conv.id}`)}
                     className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all text-left"
                   >
+
                     {/* Avatar */}
                     <div className="relative shrink-0">
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center overflow-hidden">

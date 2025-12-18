@@ -83,6 +83,7 @@ export default function CreatePostForm() {
           placeholder="What's on your mind?"
           disabled={loading}
         />
+        
 
         {/* Image Preview */}
         {file && (
