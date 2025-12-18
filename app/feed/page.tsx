@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import Image from "next/image";
 import { MessageCircle, Share2, MoreHorizontal, Sparkles } from "lucide-react";
 import ResponsiveSidebar from "@/components/navbar";
+import FeedTab from "@/components/feed/FeedTab";
 
 export default async function FeedPage() {
   const session = await getServerSession(authOptions);
@@ -49,6 +50,7 @@ export default async function FeedPage() {
 
   return (
     <div className="min-h-screen bg-[#0f1115] text-slate-200 selection:bg-rose-500/30 font-sans">
+      <FeedTab />
       {/* Background Decor */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-900/10 rounded-full blur-[120px]" />
