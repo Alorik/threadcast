@@ -31,26 +31,35 @@ model User {
 
 model Post {
   id          String   @id @default(uuid())
+
   userId      String
   user        User     @relation(fields: [userId], references: [id])
-  parentId    String?   
+
+  // Thread replies (perfect, keep this)
+  parentId    String?
   parent      Post?    @relation("PostToReplies", fields: [parentId], references: [id])
   replies     Post[]   @relation("PostToReplies")
-  mediaUrl    String?
-  content     String
-  type        PostType @default(MICRO)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  media       Media[]
+
+  // Content
+  content     String?        // ⬅️ optional now
+  type        PostType       // THREAD | POST
+
+  // Media
+  media       Media[]        // ⬅️ single source of truth
+
+  // Social
   likes       Like[]
   comments    Comment[]
-  
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type, createdAt])
 }
 
 enum PostType {
-  CHAT
-  THREAD
-  MICRO
+  THREAD   // text-only
+  POST     // has media
 }
 
 model Media {
@@ -58,7 +67,14 @@ model Media {
   postId    String
   post      Post      @relation(fields: [postId], references: [id])
   url       String
+  type      MediaType
   createdAt DateTime  @default(now())
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  GIF
 }
 
 model Like{

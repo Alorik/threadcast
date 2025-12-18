@@ -28,7 +28,7 @@ const navItems = [
   },
   { id: "messages", label: "Messages", icon: Mail, href: "/messages" },
   { id: "profile", label: "Profile", icon: User },
-  { id: "create", label: "Create", icon: Plus, href: "/create" },
+  { id: "create", label: "Create", icon: Plus, href: "/post" },
 ];
 
 export default function ResponsiveSidebar() {

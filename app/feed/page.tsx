@@ -1,11 +1,11 @@
 import { authOptions } from "@/auth/config";
 import CommentForm from "@/components/comments-form";
 import CreatePostForm from "@/components/create-post-form";
-import LikeButton from "@/components/like-button"; // Reverted to standard LikeButton
+import LikeButton from "@/components/like-button";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import Image from "next/image";
-import { MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { MessageCircle, Share2, MoreHorizontal, Sparkles } from "lucide-react";
 import ResponsiveSidebar from "@/components/navbar";
 
 export default async function FeedPage() {
@@ -48,171 +48,165 @@ export default async function FeedPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0f1115] text-slate-200 selection:bg-rose-500/30">
+    <div className="min-h-screen bg-[#0f1115] text-slate-200 selection:bg-rose-500/30 font-sans">
       {/* Background Decor */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-rose-600/10 rounded-full blur-[120px]" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-900/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-900/10 rounded-full blur-[120px]" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
       </div>
-      <div className="flex items-center justify-between">
-        <div className="relative z-10 max-w-2xl mx-auto py-10 px-4">
-          {/* Header */}
-          <header className="mb-8 flex items-center justify-between">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-rose-400 bg-clip-text text-transparent tracking-tight">
-              Feed
-            </h1>
-            {/* User Avatar Placeholder or Link to Profile */}
-            <div className="h-8 w-8 rounded-full bg-white/5 border border-white/10 overflow-hidden relative">
-              {session?.user?.image && (
-                <Image
-                  src={session.user.image}
-                  alt="Me"
-                  fill
-                  className="object-cover"
-                />
+
+      <div className="relative z-10">
+        {/* Navigation Rail */}
+        <ResponsiveSidebar />
+
+        {/* Main Content Area - Pushed right on desktop to accommodate sidebar */}
+        <main className="md:pl-72 min-h-screen">
+          <div className="max-w-2xl mx-auto py-8 px-4 md:px-8">
+
+            {/* Posts Stream */}
+            <div className="space-y-8 pb-24">
+              {posts.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 rounded-3xl border border-dashed border-white/10 bg-white/5">
+                  <div className="p-4 rounded-full bg-white/5 mb-4">
+                    <Sparkles className="text-slate-500" />
+                  </div>
+                  <p className="text-slate-400 font-medium">
+                    It's quiet here...
+                  </p>
+                  <p className="text-slate-600 text-sm">
+                    Be the first to post something!
+                  </p>
+                </div>
               )}
-            </div>
-          </header>
 
-          {/* Create Post Section */}
-   
-
-          {/* Feed List */}
-          <div className="space-y-6">
-            {posts.length === 0 && (
-              <div className="text-center py-12 rounded-3xl border border-dashed border-white/10">
-                <p className="text-slate-500">
-                  No posts yet. Be the first to share something!
-                </p>
-              </div>
-            )}
-
-            {posts.map((post) => (
-              <article
-                key={post.id}
-                className="group relative bg-slate-900/40 border border-white/5 rounded-[2rem] p-6 backdrop-blur-md transition-all hover:bg-slate-900/60 hover:border-white/10 shadow-lg"
-              >
-                {/* Post Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    {/* Avatar */}
-                    <div className="relative h-10 w-10 shrink-0">
-                      {post.user?.avatarUrl ? (
-                        <Image
-                          src={post.user.avatarUrl}
-                          alt={post.user.username ?? "User"}
-                          fill
-                          className="rounded-full object-cover ring-2 ring-[#0f1115]"
-                        />
-                      ) : (
-                        <div className="h-full w-full rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-inner ring-2 ring-[#0f1115]">
-                          {post.user?.username?.[0]?.toUpperCase() ?? "?"}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* User Info */}
-                    <div>
-                      <h3 className="font-semibold text-slate-100 text-sm leading-tight">
-                        {post.user?.username ?? "Unknown"}
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        {new Date(post.createdAt).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "numeric",
-                          }
+              {posts.map((post) => (
+                <article
+                  key={post.id}
+                  className="group relative bg-zinc-900/20 border border-white/5 rounded-3xl p-6 backdrop-blur-sm hover:bg-zinc-900/40 hover:border-white/10 transition-all duration-300"
+                >
+                  {/* Post Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-10 w-10 shrink-0">
+                        {post.user?.avatarUrl ? (
+                          <Image
+                            src={post.user.avatarUrl}
+                            alt={post.user.username ?? "User"}
+                            fill
+                            className="rounded-full object-cover ring-2 ring-black"
+                          />
+                        ) : (
+                          <div className="h-full w-full rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white ring-2 ring-black">
+                            {post.user?.username?.[0]?.toUpperCase() ?? "?"}
+                          </div>
                         )}
+                      </div>
+
+                      <div className="flex flex-col">
+                        <h3 className="font-bold text-slate-100 text-sm hover:text-indigo-400 transition-colors cursor-pointer">
+                          {post.user?.username ?? "Unknown"}
+                        </h3>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          {new Date(post.createdAt).toLocaleDateString(
+                            undefined,
+                            {
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button className="text-slate-500 hover:text-white transition-colors p-2 rounded-full hover:bg-white/5">
+                      <MoreHorizontal size={18} />
+                    </button>
+                  </div>
+
+                  {/* Content */}
+                  <div className="space-y-4 pl-[52px]">
+                    {post.content && (
+                      <p className="text-[15px] text-slate-300 leading-relaxed whitespace-pre-wrap font-light">
+                        {post.content}
                       </p>
+                    )}
+
+                    {post.mediaUrl && (
+                      <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-zinc-950 border border-white/5 shadow-lg group-hover:shadow-indigo-500/5 transition-all">
+                        <Image
+                          src={post.mediaUrl}
+                          alt="Post media"
+                          fill
+                          className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                          sizes="(max-width: 768px) 100vw, 768px"
+                        />
+                      </div>
+                    )}
+
+                    {/* Actions & Stats */}
+                    <div className="flex items-center gap-6 pt-2">
+                      <div className="flex items-center gap-2">
+                        <LikeButton
+                          postId={post.id}
+                          liked={post.likes?.length > 0}
+                        />
+                        <span className="text-xs text-slate-500 font-medium min-w-[1rem]">
+                          {post._count?.likes > 0 && post._count?.likes}
+                        </span>
+                      </div>
+
+                      <button className="flex items-center gap-2 text-slate-500 hover:text-indigo-400 transition-colors group/comment">
+                        <MessageCircle
+                          size={20}
+                          className="group-hover/comment:scale-110 transition-transform"
+                        />
+                        <span className="text-xs font-medium">
+                          {post._count?.comments > 0
+                            ? post._count?.comments
+                            : ""}
+                        </span>
+                      </button>
+
+                      <button className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors ml-auto">
+                        <Share2 size={18} />
+                      </button>
+                    </div>
+
+                    {/* Comments Preview */}
+                    {post.comments && post.comments.length > 0 && (
+                      <div className="pt-4 border-t border-white/5 space-y-3">
+                        {post.comments.slice(0, 2).map((c) => (
+                          <div
+                            key={c.id}
+                            className="flex gap-2 text-sm group/comment"
+                          >
+                            <span className="font-bold text-slate-400 text-xs shrink-0 mt-0.5">
+                              {c.user?.username}:
+                            </span>
+                            <p className="text-slate-400 text-xs leading-relaxed group-hover/comment:text-slate-300 transition-colors">
+                              {c.content}
+                            </p>
+                          </div>
+                        ))}
+                        {post.comments.length > 2 && (
+                          <button className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                            View all {post.comments.length} comments
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Add Comment */}
+                    <div className="pt-2">
+                      <CommentForm postId={post.id} />
                     </div>
                   </div>
-
-                  <button className="text-slate-500 hover:text-white transition-colors">
-                    <MoreHorizontal size={18} />
-                  </button>
-                </div>
-
-                {/* Post Content */}
-                <div className="mb-4 space-y-3">
-                  {post.content && (
-                    <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-                  )}
-
-                  {post.mediaUrl && (
-                    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-800 border border-white/5">
-                      <Image
-                        src={post.mediaUrl}
-                        alt="Post media"
-                        fill
-                        className="object-cover hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 768px) 100vw, 768px"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Bar */}
-                <div className="flex items-center gap-6 border-t border-white/5 pt-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <LikeButton
-                      postId={post.id}
-                      liked={post.likes?.length > 0}
-                    />
-                    <span className="text-xs text-slate-400 font-medium">
-                      {post._count?.likes ?? 0}
-                    </span>
-                  </div>
-
-                  <button className="flex items-center gap-2 group/comment">
-                    <MessageCircle
-                      size={20}
-                      className="text-slate-500 group-hover/comment:text-cyan-400 transition-colors"
-                    />
-                    <span className="text-xs text-slate-400 group-hover/comment:text-cyan-400 transition-colors font-medium">
-                      {post._count?.comments ?? 0}
-                    </span>
-                  </button>
-
-                  <button className="ml-auto text-slate-500 hover:text-white transition-colors">
-                    <Share2 size={20} />
-                  </button>
-                </div>
-
-                {/* Comments Section */}
-                <div className="bg-black/20 rounded-xl p-4 space-y-4">
-                  {post.comments && post.comments.length > 0 && (
-                    <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-                      {post.comments.map((c) => (
-                        <div key={c.id} className="flex gap-2 text-sm group/c">
-                          <span className="font-bold text-slate-400 text-xs shrink-0 mt-0.5">
-                            {c.user?.username}:
-                          </span>
-                          <p className="text-slate-300 text-xs leading-relaxed">
-                            {c.content}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Comment Input */}
-                  <div className="pt-2">
-                    <CommentForm postId={post.id} />
-                  </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
+            </div>
           </div>
-        </div>
-        <div>
-          <ResponsiveSidebar />
-        </div>
+        </main>
       </div>
     </div>
   );

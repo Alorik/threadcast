@@ -26,20 +26,44 @@ export async function POST(req: NextRequest) {
   }
 
   // FIX: extract mediaUrl too
-  const { content, mediaUrl } = await req.json();
+  const { content, media, parentId } = await req.json();
+  const hasContent = content && content.trim().length > 0;
+  const hasMedia = media && media.length > 0;
 
-  if (!content || !content.trim()) {
+  if (!hasContent && !hasMedia) {
     return NextResponse.json(
-      { error: "Content cannot be empty" },
+      { error: "Post must have content or media" },
       { status: 400 }
     );
   }
 
+  const type = hasMedia ? "POST" : "THREAD";
+
   const post = await prisma.post.create({
     data: {
-      content,
-      mediaUrl: mediaUrl || null, // FIXED
       userId: session.user.id,
+      content: hasContent ? content.trim() : null,
+      type,
+      parentId: parentId ?? null,
+
+      media: hasMedia
+        ? {
+            create: media.map((m: any) => ({
+              url: m.url,
+              type: m.type,
+            })),
+          }
+        : undefined,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+      media: true,
     },
   });
 
