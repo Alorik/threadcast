@@ -27,7 +27,7 @@ export default async function UserProfile({
     },
   });
 
-  // ❌ THESE EARLY RETURNS WERE THE PROBLEM - they should stay in the server component
+
   if (!user) {
     return (
       <div className="max-w-3xl mx-auto p-4">

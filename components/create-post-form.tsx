@@ -43,7 +43,10 @@ export default function CreatePostForm() {
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, mediaUrl }),
+        body: JSON.stringify({
+          content,
+          media: mediaUrl ? [{ url: mediaUrl, type: "IMAGE" }] : [],
+        }),
       });
 
       if (!res.ok) throw new Error("Failed to create post");

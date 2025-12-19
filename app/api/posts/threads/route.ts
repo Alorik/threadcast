@@ -5,9 +5,8 @@ export async function GET() {
   const threads = await prisma.post.findMany({
     where: {
       type: "THREAD",
-      parentId: null,
+      parentId: null, // only top-level threads
     },
-
     orderBy: {
       createdAt: "desc",
     },
@@ -19,8 +18,9 @@ export async function GET() {
           avatarUrl: true,
         },
       },
+      media: true, // will be empty, but keeps shape consistent
     },
   });
 
-  return NextResponse.json(threads, { status: 201 });
+  return NextResponse.json(threads);
 }

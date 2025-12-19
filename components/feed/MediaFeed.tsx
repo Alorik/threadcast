@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import PostCard from "@/components/post/PostCard";
+
 export default function MediaFeed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,27 +20,14 @@ export default function MediaFeed() {
     return <p className="p-4 text-slate-400">Loading posts...</p>;
   }
 
-  return (
-    <div className="space-y-6 p-4">
-      {posts.map((post) => (
-        <div
-          key={post.id}
-          className="rounded-xl overflow-hidden border border-white/10"
-        >
-          {post.media?.[0] && (
-            <Image
-              height={400}
-              width={400}
-              src={post.media[0].url}
-              alt="postimg"
-              className="w-full object-cover"
-            />
-          )}
+  if (posts.length === 0) {
+    return <p className="p-4 text-slate-500 text-sm">No media posts yet</p>;
+  }
 
-          {post.content && (
-            <p className="p-3 text-slate-200 text-sm">{post.content}</p>
-          )}
-        </div>
+  return (
+    <div className="space-y-8 pb-24">
+      {posts.map((post) => (
+        <PostCard key={post.id} post={post} />
       ))}
     </div>
   );

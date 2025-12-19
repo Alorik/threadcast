@@ -4,6 +4,12 @@ import { getToken } from "next-auth/jwt";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // ⬇️ ADD THIS - Allow all API routes to pass through
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
   if (
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
@@ -14,7 +20,7 @@ export async function middleware(req: NextRequest) {
 
   const token = await getToken({
     req,
-    secret: process.env.NEXTAUT_SECRET,
+    secret: process.env.NEXTAUTH_SECRET, // ⬅️ Also fix typo: NEXTAUT_SECRET → NEXTAUTH_SECRET
   });
 
   if (token) {
@@ -32,6 +38,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 }
+
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
