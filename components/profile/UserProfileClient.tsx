@@ -184,3 +184,8 @@ export default function UserProfileClient({
     </div>
   );
 }
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="py-32 text-center text-neutral-600 italic">{text}</div>
+  );
+}
