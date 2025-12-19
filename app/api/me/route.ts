@@ -14,12 +14,13 @@ export async function PATCH(req: NextRequest) {
   }
 
   const data = await req.json();
-  const { username, bio, avatarUrl } = data;
+  const { name, bio, avatarUrl, location } = data;
 
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: {
-      username,
+      location,
+      name,
       bio,
       avatarUrl,
       onboarded: true
@@ -48,6 +49,7 @@ export async function GET() {
       name: true,
       bio: true,
       avatarUrl: true,
+      location: true,
     },
   });
 

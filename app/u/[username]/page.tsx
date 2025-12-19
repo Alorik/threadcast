@@ -24,6 +24,7 @@ export default async function UserProfile({
       name: true,
       bio: true,
       avatarUrl: true,
+      location:true,
     },
   });
 

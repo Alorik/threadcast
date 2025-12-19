@@ -129,10 +129,10 @@ export default function UserProfileClient({
                   className="group relative aspect-[4/5] bg-neutral-900/30 rounded-xl overflow-hidden transition-all duration-700 hover:shadow-2xl hover:shadow-neutral-900/50"
                 >
                   {/* Content */}
-                  {post.mediaUrl ? (
+                  {post.media?.[0]?.url ? (
                     <Image
                       fill
-                      src={post.mediaUrl}
+                      src={post.media[0].url}
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-105 opacity-90 group-hover:opacity-100"
                       alt="post"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

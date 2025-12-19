@@ -17,6 +17,7 @@ interface ProfileCardProps {
     username: string;
     name?: string | null;
     bio?: string | null;
+    location?: string | null;
     avatarUrl?: string | null;
   };
   postCount: number;
@@ -152,19 +153,23 @@ export default function ProfileCard({
           </div>
 
           {/* Bio & Details */}
-          {user.bio && (
+          {user.bio ? (
             <p className="text-neutral-300 text-sm leading-relaxed max-w-lg">
               {user.bio}
             </p>
-          )}
+          ) : isOwnProfile ? (
+            <p className="text-neutral-500 text-sm italic">
+              Add a bio to tell people about yourself
+            </p>
+          ) : null}
 
           {/* Metadata Row */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-neutral-500 font-medium border-t border-neutral-900 pt-4">
+          {user.location && (
             <div className="flex items-center gap-1.5">
               <MapPin size={12} className="text-neutral-600" />
               <span>{user.location}</span>
             </div>
-          </div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-px bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function EditProfileModel({
   initialName,
@@ -12,7 +13,9 @@ export default function EditProfileModel({
   initialBio: string;
   initialLocation: string;
   onClose: () => void;
-}) {
+  }) {
+  
+  const router = useRouter();
   const [name, setName] = useState(initialName || "");
   const [bio, setBio] = useState(initialBio || "");
   const [location, setLocation] = useState(initialLocation || "");
@@ -21,13 +24,14 @@ export default function EditProfileModel({
   async function handleSave() {
     setLoading(true);
 
-    await fetch("/api/users/profile", {
-      method: "POST",
+    await fetch("/api/me", {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, bio, location }),
     });
 
     setLoading(false);
+    router.refresh();
     onClose();
   }
 
