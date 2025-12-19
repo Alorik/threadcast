@@ -27,19 +27,16 @@ export default function FollowButton({
   return (
     <button
       onClick={handleFollow}
-      disabled={loading}
-      className={`px-4 py-1 rounded-md border text-sm ${
-        isFollowing
-          ? "bg-gray-200 text-black"
-          : "bg-blue-500 text-white hover:bg-blue-600"
-      }`}
+      className={`
+        px-6 py-2 rounded-full text-sm font-semibold transition-all duration-200 border cursor-pointer
+        ${
+          isFollowing
+            ? "bg-transparent border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500"
+            : "bg-neutral-200 border-transparent text-neutral-900 hover:bg-neutral-300"
+        }
+      `}
     >
-      
-      {loading
-        ? "Loading..."
-        : isFollowing
-        ? "Following ▾" // you may change this text
-        : "Follow"}
+      {isFollowing ? "Following" : "Follow"}
     </button>
   );
 }

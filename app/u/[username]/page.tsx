@@ -1,7 +1,7 @@
 // app/u/[username]/page.tsx ✅ FIX THIS
 import { authOptions } from "@/auth/config";
-import FollowButton from "@/components/follow-button";
-import UserProfileClient from "@/components/UserProfileClient";
+import UserProfileClient from "@/components/profile/UserProfileClient";
+
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -76,12 +76,7 @@ export default async function UserProfile({
         posts={posts}
         isOwnProfile={isOwnProfile}
       />
-      {!isOwnProfile && (
-        <FollowButton
-          targetUserId={user.id}
-          isFollowingInitial={!!isFollowing}
-        />
-      )}
+
     </div>
   );
 }

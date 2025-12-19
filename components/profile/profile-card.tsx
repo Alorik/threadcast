@@ -7,6 +7,9 @@ import {
   Link as LinkIcon,
   Calendar,
 } from "lucide-react";
+import FollowButton from "./follow-button";
+import { useState } from "react";
+import EditProfileModel from "./EditProfileModel";
 
 interface ProfileCardProps {
   user: {
@@ -22,7 +25,37 @@ interface ProfileCardProps {
   isOwnProfile?: boolean;
   followerCount: number;
   followingCount: number;
+  isFollowing?: boolean;
+  onFollowToggle?: () => void;
 }
+
+// Helper function to get avatar or generate fallback
+const getAvatarSrc = (
+  avatarUrl: string | null | undefined,
+  username: string
+) => {
+  if (avatarUrl) return avatarUrl;
+
+  // Generate a consistent color based on username
+  const hash = username.split("").reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+  const hue = Math.abs(hash) % 360;
+
+  // Return a data URI with initials
+  const initial = username.charAt(0).toUpperCase();
+  const svg = `
+    <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+      <rect width="150" height="150" fill="hsl(${hue}, 70%, 60%)"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" 
+            font-family="system-ui, sans-serif" font-size="60" font-weight="600" fill="white">
+        ${initial}
+      </text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
 
 export default function ProfileCard({
   user,
@@ -32,7 +65,16 @@ export default function ProfileCard({
   isOwnProfile,
   followerCount,
   followingCount,
+  isFollowing = false,
+  onFollowToggle,
 }: ProfileCardProps) {
+  const displayAvatarUrl = getAvatarSrc(
+    avatarUrl || user.avatarUrl,
+    user.username
+  );
+
+  const [editing, setEditing] = useState(false);
+
   return (
     <div className="relative w-full max-w-2xl mx-auto group">
       {/* Abstract Background Banner */}
@@ -55,18 +97,16 @@ export default function ProfileCard({
                 }`}
               >
                 <Image
-                  key={avatarUrl}
-                  src={
-                    avatarUrl ||
-                    user.avatarUrl ||
-                    "https://via.placeholder.com/150"
-                  }
+                  key={avatarUrl || user.avatarUrl}
+                  src={displayAvatarUrl}
                   alt={`${user.username}'s avatar`}
                   fill
                   className={`object-cover transition-all duration-500 ${
                     isOwnProfile ? "group-hover:opacity-75" : ""
                   }`}
                   onClick={isOwnProfile ? onAvatarClick : undefined}
+                  priority
+                  unoptimized={displayAvatarUrl.startsWith("data:")}
                 />
                 {isOwnProfile && (
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
@@ -80,13 +120,17 @@ export default function ProfileCard({
           {/* Action Buttons */}
           <div className="flex items-center gap-2 mb-1">
             {isOwnProfile ? (
-              <button className="px-4 py-1.5 bg-neutral-100 text-neutral-950 hover:bg-white text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+              <button
+                onClick={() => setEditing(true)}
+                className="px-4 py-1.5 bg-neutral-100 text-neutral-950 hover:bg-white text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+              >
                 Edit Profile
               </button>
             ) : (
-              <button className="px-5 py-1.5 bg-neutral-100 hover:bg-white text-neutral-950 text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                Follow
-              </button>
+              <FollowButton
+                targetUserId={user.id}
+                isFollowingInitial={!!isFollowing}
+              />
             )}
             {isOwnProfile && (
               <button className="p-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors">
@@ -118,15 +162,7 @@ export default function ProfileCard({
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-neutral-500 font-medium border-t border-neutral-900 pt-4">
             <div className="flex items-center gap-1.5">
               <MapPin size={12} className="text-neutral-600" />
-              <span>Earth</span>
-            </div>
-            <div className="flex items-center gap-1.5 hover:text-neutral-300 transition-colors cursor-pointer">
-              <LinkIcon size={12} className="text-neutral-600" />
-              <span>nexus.ui</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Calendar size={12} className="text-neutral-600" />
-              <span>Joined 2024</span>
+              <span>{user.location}</span>
             </div>
           </div>
 
@@ -138,6 +174,14 @@ export default function ProfileCard({
           </div>
         </div>
       </div>
+      {editing && (
+        <EditProfileModel
+          initialName={user.name}
+          initialBio={user.bio}
+          initialLocation={user.location}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </div>
   );
 }

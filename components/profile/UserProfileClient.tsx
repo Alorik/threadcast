@@ -1,9 +1,9 @@
 "use client";
 import Image from "next/image";
 import { useState } from "react";
+import { Heart, MessageCircle, Camera, Layers } from "lucide-react";
 import ProfileCard from "./profile-card";
-import UploadAvatar from "./avatar";
-import { Grid, Heart, MessageCircle, Camera, Layers } from "lucide-react";
+import UploadAvatar from "../avatar";
 
 export default function UserProfileClient({
   user,

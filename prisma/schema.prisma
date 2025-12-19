@@ -19,6 +19,7 @@ model User {
   onboarded     Boolean  @default(false)
   updatedAt     DateTime @updatedAt
   username      String  @unique
+  location      String?
   posts         Post[]
   comments      Comment[]
   likes         Like[]
