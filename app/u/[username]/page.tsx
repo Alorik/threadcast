@@ -24,10 +24,9 @@ export default async function UserProfile({
       name: true,
       bio: true,
       avatarUrl: true,
-      location:true,
+      location: true,
     },
   });
-
 
   if (!user) {
     return (
@@ -43,6 +42,15 @@ export default async function UserProfile({
   const posts = await prisma.post.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
+    include: {
+      media: true,
+      _count: {
+        select: {
+          likes: true,
+          comments: true,
+        },
+      },
+    },
   });
   const isFollowing = await prisma.follow.findFirst({
     where: {
@@ -77,7 +85,6 @@ export default async function UserProfile({
         posts={posts}
         isOwnProfile={isOwnProfile}
       />
-
     </div>
   );
 }
