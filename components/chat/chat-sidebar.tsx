@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Search, Plus } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import NewMessageModal from "./new-message-model";
 
 type Conversation = {
   id: string;
@@ -29,6 +30,7 @@ export default function ChatSidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [openNewMessage, setOpenNewMessage] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -114,7 +116,7 @@ export default function ChatSidebar() {
         <h2 className="text-xl font-bold text-white">Messages</h2>
         <button
           className="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors"
-          onClick={() => router.push("/users")}
+          onClick={() => setOpenNewMessage(true)}
         >
           <Plus size={18} />
         </button>
@@ -230,6 +232,10 @@ export default function ChatSidebar() {
           })
         )}
       </div>
+      <NewMessageModal
+        open={openNewMessage}
+        onClose={() => setOpenNewMessage(false)}
+      />
     </div>
   );
 }
