@@ -14,7 +14,6 @@ export default async function ChatPage({
   if (!session) {
     return <div>Please login</div>;
   }
-
   const { conversationId } = await params; // ✅ Added await
 
   // 1️⃣ Fetch conversation + members
@@ -37,6 +36,13 @@ export default async function ChatPage({
 
   if (!conversation) {
     return <div>Conversation not found</div>;
+  }
+  const isMember = conversation.members.some(
+    (m) => m.userId === session.user.id
+  );
+
+  if (!isMember) {
+    return <div>Unauthorized</div>;
   }
 
   // 2️⃣ Find other user

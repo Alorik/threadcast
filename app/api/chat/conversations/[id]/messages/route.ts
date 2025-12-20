@@ -1,4 +1,4 @@
-//api/chat/messages/route.ts
+//api/chat/conversations/[id]/messages/route.ts
 import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";

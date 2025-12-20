@@ -17,6 +17,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid Target User" }, { status: 400 });
   }
 
+  const isFollowing = await prisma.follow.findFirst({
+    where: {
+      followerId: currentUserId,
+      followingId: targetUserId,
+    },
+  });
+
+  if (!isFollowing) {
+    return NextResponse.json(
+      { error: "You can only message users you follow" },
+      { status: 403 }
+    );
+  }
+
   // Find conversation with EXACTLY these two users
   const existingConversation = await prisma.conversation.findFirst({
     where: {
