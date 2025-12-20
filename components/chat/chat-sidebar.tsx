@@ -80,6 +80,10 @@ export default function ChatSidebar() {
       }
     );
   };
+  const validConversations = conversations.filter((conv) => {
+    const memberIds = conv.members.map((m) => m.userId);
+    return conv.members.length === 2 && new Set(memberIds).size === 2;
+  });
 
   // Format timestamp to show relative time (e.g., "2h", "Yesterday", "3d")
   const formatTimestamp = (dateString: string) => {
@@ -104,11 +108,10 @@ export default function ChatSidebar() {
     }
   };
 
-  const filtered = conversations.filter((conv) => {
+  const filtered = validConversations.filter((conv) => {
     const otherUser = getOtherUser(conv);
     return otherUser.username.toLowerCase().includes(searchQuery.toLowerCase());
   });
-
   return (
     <div className="h-full flex flex-col bg-[#0f1115] p-4">
       {/* Header */}
