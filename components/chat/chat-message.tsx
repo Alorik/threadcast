@@ -1,13 +1,14 @@
 "use client";
-import Image from "next/image";
+
 import { pusherClient } from "@/lib/pusher-client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Message } from "@/types/chat";
 import { CheckCheck } from "lucide-react";
+
 interface ChatMessageProps {
   conversationId: string;
   initialMessages: Message[];
-  currentUserId: string; // ✅ Add this prop
+  currentUserId: string;
 }
 
 export default function ChatMessage({
@@ -17,20 +18,25 @@ export default function ChatMessage({
 }: ChatMessageProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Always scroll to bottom when messages change
   useEffect(() => {
-    const channelName = `private-conversation-${conversationId}`;
-    const channel = pusherClient.subscribe(channelName);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, typingUser]);
 
-    // Listen for new messages
+  // Pusher
+  useEffect(() => {
+    const channel = pusherClient.subscribe(
+      `private-conversation-${conversationId}`
+    );
+
     channel.bind("new-message", (message: Message) => {
-      setMessages((prev) => {
-        if (prev.find((m) => m.id === message.id)) return prev;
-        return [...prev, message];
-      });
+      setMessages((prev) =>
+        prev.some((m) => m.id === message.id) ? prev : [...prev, message]
+      );
     });
 
-    // Listen for typing indicators
     channel.bind("typing:start", (data: { username: string }) => {
       setTypingUser(data.username);
     });
@@ -41,69 +47,52 @@ export default function ChatMessage({
 
     return () => {
       channel.unbind_all();
-      pusherClient.unsubscribe(channelName);
+      pusherClient.unsubscribe(`private-conversation-${conversationId}`);
     };
   }, [conversationId]);
 
-return (
-  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1a1d29] min-h-[calc(100vh-240px)]">
-    {messages.map((msg) => {
-      const isCurrentUser = msg.sender.id === currentUserId;
-      const time = new Date(msg.createdAt).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+  return (
+    <div className="flex-1 overflow-y-auto bg-[#1a1d29] px-4 py-4 pb-32 space-y-4">
+      {messages.map((msg) => {
+        const isMe = msg.sender.id === currentUserId;
+        const time = new Date(msg.createdAt).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
 
-      return (
-        <div
-          key={msg.id}
-          className={`flex gap-3 ${
-            isCurrentUser ? "flex-row-reverse" : "flex-row"
-          }`}
-        >
-          {/* Avatar */}
-          {!isCurrentUser && (
-            <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center flex-shrink-0 text-white font-semibold">
-              {msg.sender.avatarUrl ? (
-                <img
-                  src={msg.sender.avatarUrl}
-                  alt={msg.sender.username}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                msg.sender.username[0].toUpperCase()
-              )}
-            </div>
-          )}
-
-          {/* Message bubble wrapper */}
+        return (
           <div
-            className={`flex flex-col max-w-[70%] ${
-              isCurrentUser ? "items-end" : "items-start"
-            }`}
+            key={msg.id}
+            className={`flex ${isMe ? "justify-end" : "justify-start"}`}
           >
-            {/* The bubble */}
-            <div
-              className={`px-4 py-3 rounded-2xl ${
-                isCurrentUser
-                  ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-tr-sm"
-                  : "bg-[#2a2d3a] text-white rounded-tl-sm"
-              }`}
-            >
-              <p className="text-[15px] leading-relaxed">{msg.content}</p>
-            </div>
+            <div className="max-w-[70%] space-y-1">
+              <div
+                className={`px-4 py-3 rounded-2xl ${
+                  isMe
+                    ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-br-sm"
+                    : "bg-[#2a2d3a] text-white rounded-bl-sm"
+                }`}
+              >
+                {msg.content}
+              </div>
 
-            {/* Time and checkmarks */}
-            <div className="flex items-center gap-1 mt-1 px-2">
-              <span className="text-xs text-gray-400">{time}</span>
-              {isCurrentUser && (
-                <CheckCheck size={14} className="text-cyan-400" />
-              )}
+              <div className="flex items-center gap-1 text-xs text-gray-400 justify-end">
+                {time}
+                {isMe && <CheckCheck size={14} className="text-cyan-400" />}
+              </div>
             </div>
           </div>
+        );
+      })}
+
+      {/* Typing indicator */}
+      {typingUser && (
+        <div className="text-sm text-gray-400 px-2">
+          {typingUser} is typing...
         </div>
-      );
-    })}
-  </div>
-);
+      )}
+
+      <div ref={bottomRef} />
+    </div>
+  );
 }

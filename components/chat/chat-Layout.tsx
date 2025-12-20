@@ -1,3 +1,4 @@
+// ========== ChatLayout.tsx ==========
 "use client";
 
 import ChatHeader from "./chat-header";
@@ -21,24 +22,22 @@ export default function ChatLayout({
   conversationId,
   initialMessages,
   otherUser,
-  currentUserId
+  currentUserId,
 }: ChatLayoutProps) {
   return (
-    <div className="flex h-screen w-full bg-[#0f1115]">
-      {/* Sidebar - Fixed width */}
-      <div className="w-96 flex-shrink-0 border-r border-white/10">
+    <div className="flex h-screen w-full bg-[#0f1115] overflow-hidden">
+      {/* Sidebar */}
+      <div className="w-96 flex-shrink-0 border-r border-white/10 overflow-hidden">
         <ChatSidebar />
       </div>
 
-      {/* Main Chat Area - Takes remaining space */}
-      <div className="flex-1 flex flex-col">
-        {/* Header - Fixed at top */}
-        <div className="flex-shrink-0">
-          <ChatHeader otherUser={otherUser} />
-        </div>
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Header - Fixed */}
+        <ChatHeader otherUser={otherUser} />
 
-        {/* Messages - Scrollable area */}
-        <div className="flex-1 overflow-hidden">
+        {/* Messages - Scrollable */}
+        <div className="flex-1 overflow-y-auto">
           <ChatMessage
             conversationId={conversationId}
             initialMessages={initialMessages}
@@ -46,10 +45,8 @@ export default function ChatLayout({
           />
         </div>
 
-        {/* Input - Fixed at bottom */}
-        <div className="flex-shrink-0">
-          <ChatInput conversationId={conversationId} />
-        </div>
+        {/* Input - Fixed */}
+        <ChatInput conversationId={conversationId} />
       </div>
     </div>
   );

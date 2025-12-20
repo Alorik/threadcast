@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     user_id: session.user.id,
     user_info: {
       username: session.user.username,
+      avatarUrl: session.user.image,
     },
   };
 
