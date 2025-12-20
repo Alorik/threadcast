@@ -24,6 +24,10 @@ export async function GET() {
         members: {
           some: { userId },
         },
+
+        messages: {
+          some: {},
+        },
       },
       include: {
         members: {
@@ -71,3 +75,4 @@ export async function GET() {
     );
   }
 }
+
