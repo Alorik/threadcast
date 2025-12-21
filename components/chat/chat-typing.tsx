@@ -136,6 +136,7 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
           <Paperclip className="text-slate-400 hover:text-white mb-1 cursor-pointer" />
           <input
             value={inputValue}
+            
             onChange={(e) => {
               setInputValue(e.target.value);
               handleTyping();

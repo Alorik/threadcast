@@ -9,28 +9,17 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      console.log("❌ No session or user ID");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
-    console.log("📦 Received body:", body); // ✅ Debug log
 
     const { conversationId, content } = body;
 
-    console.log("🔍 Validation:", {
-      conversationId,
-      content,
-      hasConversationId: !!conversationId,
-      hasContent: !!content,
-    }); // ✅ Debug log
-
     if (!conversationId || !content) {
-      console.log("❌ Invalid payload - missing conversationId or content");
       return NextResponse.json({ error: "Invalid Payload" }, { status: 400 });
     }
 
-    console.log("✅ Creating message...");
     const message = await prisma.message.create({
       data: {
         conversationId,
@@ -48,8 +37,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log("✅ Message created:", message.id);
-
     const messageForPusher = {
       id: message.id,
       content: message.content,
@@ -63,11 +50,8 @@ export async function POST(req: NextRequest) {
       messageForPusher
     );
 
-    console.log("✅ Message sent via Pusher");
-
     return NextResponse.json(message, { status: 201 });
   } catch (error) {
-    console.error("❌ Error in POST /api/chat/messages:", error);
     return NextResponse.json(
       {
         error: "Internal Server Error",

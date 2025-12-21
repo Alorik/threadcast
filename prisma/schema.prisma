@@ -142,10 +142,19 @@ model Message {
   id             String        @id @default(uuid())
   conversationId String
   senderId       String
-  content        String
+
+  type           MessageType   @default(TEXT)
+  content        String?
+  mediaUrl    String?
+
   createdAt      DateTime      @default(now())
   readAt         DateTime?
-  mediaType      String?
+ 
   conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+enum MessageType{
+TEXT
+IMAGE
 }
