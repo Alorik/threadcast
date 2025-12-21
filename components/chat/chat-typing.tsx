@@ -10,12 +10,12 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ conversationId }: ChatInputProps) {
-  console.log("🔑 ChatInput conversationId:", conversationId); 
+  console.log("🔑 ChatInput conversationId:", conversationId);
   const [inputValue, setInputValue] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -32,79 +32,84 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
   }, []);
 
   function handleTyping() {
-    pusherClient.send_event(
-      "typing:start",
-      {},
-      `private-conversation-${conversationId}`
-    );
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+    fetch("/api/chat/typing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversationId,
+        type: "start",
+      }),
+    });
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
     }
 
-    timeoutRef.current = setTimeout(() => {
+    typingTimeoutRef.current = setTimeout(() => {
+      fetch("/api/chat/typing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          type: "stop",
+        }),
+      });
+    }, 1500);
+  }
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isSending) return;
+
+    setIsSending(true);
+    const messageContent = inputValue;
+    setInputValue("");
+
+    console.log("📤 Sending message:", {
+      conversationId,
+      content: messageContent,
+    }); // ✅ Debug log
+
+    try {
+      const response = await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversationId,
+          content: messageContent,
+        }),
+      });
+
+      console.log("📥 Response status:", response.status); // ✅ Debug log
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ Error response:", errorData); // ✅ Debug log
+        throw new Error("Failed to send message");
+      }
+
+      const data = await response.json();
+      console.log("✅ Success:", data); // ✅ Debug log
+
+      setShowEmojiPicker(false);
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
       pusherClient.send_event(
         "typing:stop",
         {},
         `private-conversation-${conversationId}`
       );
-    }, 1500);
-  }
-
-const sendMessage = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!inputValue.trim() || isSending) return;
-
-  setIsSending(true);
-  const messageContent = inputValue;
-  setInputValue("");
-
-  console.log("📤 Sending message:", {
-    conversationId,
-    content: messageContent,
-  }); // ✅ Debug log
-
-  try {
-    const response = await fetch("/api/chat/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        conversationId,
-        content: messageContent,
-      }),
-    });
-
-    console.log("📥 Response status:", response.status); // ✅ Debug log
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("❌ Error response:", errorData); // ✅ Debug log
-      throw new Error("Failed to send message");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      setInputValue(messageContent);
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setIsSending(false);
     }
-
-    const data = await response.json();
-    console.log("✅ Success:", data); // ✅ Debug log
-
-    setShowEmojiPicker(false);
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    pusherClient.send_event(
-      "typing:stop",
-      {},
-      `private-conversation-${conversationId}`
-    );
-  } catch (error) {
-    console.error("Failed to send message:", error);
-    setInputValue(messageContent);
-    alert("Failed to send message. Please try again.");
-  } finally {
-    setIsSending(false);
-  }
-};
+  };
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setInputValue((prev) => prev + emojiData.emoji);

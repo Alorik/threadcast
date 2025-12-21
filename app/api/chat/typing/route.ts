@@ -3,8 +3,6 @@ import { pusherServer } from "@/lib/pusher-server";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-
-
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -23,7 +21,7 @@ export async function POST(req: NextRequest) {
     {
       userId: session.user.id,
       username: session.user.username,
-    },
+    }
   );
 
   return NextResponse.json({ success: true });

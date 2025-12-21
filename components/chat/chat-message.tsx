@@ -20,6 +20,28 @@ export default function ChatMessage({
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+
+  useEffect(() => {
+    const channel = pusherClient.subscribe(
+      `private-conversation-${conversationId}`
+    );
+    channel.bind("typing:start", (data: any) => {
+      if (data.userId !== currentUserId) {
+        setTypingUser(data.username);
+      }
+    });
+
+    channel.bind("typing:stop", (data: any) => {
+      if (data.userId !== currentUserId) {
+        setTypingUser(null);
+      }
+    });
+    return () => {
+      channel.unbind_all();
+      pusherClient.unsubscribe(`private-conversation-${conversationId}`);
+    };
+  }, [conversationId, currentUserId]);
+
   // Always scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
