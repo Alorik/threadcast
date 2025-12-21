@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { success } from "zod";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -25,7 +24,7 @@ export async function POST(req: NextRequest) {
   });
 
 
-  
+
   await pusherServer.trigger(
     `private-conversation-${conversationId}`,
     "message:read",

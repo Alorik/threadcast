@@ -20,24 +20,47 @@ export default function ChatMessage({
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Always scroll to bottom when messages change
+  /* ------------------------------
+   Auto scroll to bottom
+  ------------------------------ */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typingUser]);
 
+  /* ------------------------------
+   Mark messages as READ
+  ------------------------------ */
   useEffect(() => {
-    const channel = pusherClient.subscribe(
-      `private-conversation-${conversationId}`
+    // Check if there are any unread messages from the OTHER user
+    const unreadMessages = messages.filter(
+      (m) => m.sender.id !== currentUserId && !m.readAt
     );
 
-    // Handle new messages
+    if (unreadMessages.length > 0) {
+      fetch("/api/chat/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId }),
+      });
+    }
+  }, [conversationId, messages, currentUserId]);
+
+  /* ------------------------------
+   Pusher realtime events
+  ------------------------------ */
+  useEffect(() => {
+    const channelName = `private-conversation-${conversationId}`;
+    const channel = pusherClient.subscribe(channelName);
+
+    // New message
     channel.bind("new-message", (message: Message) => {
-      setMessages((prev) =>
-        prev.some((m) => m.id === message.id) ? prev : [...prev, message]
-      );
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
     });
 
-    // Handle typing events
+    // Typing indicator
     channel.bind(
       "typing:start",
       (data: { userId: string; username: string }) => {
@@ -53,12 +76,28 @@ export default function ChatMessage({
       }
     });
 
+    // Read receipts
+    channel.bind("messages:read", () => {
+      setMessages((prev) =>
+        prev.map((m) => {
+          // If the message was sent by ME and is currently unread, mark it as read
+          if (m.sender.id === currentUserId && !m.readAt) {
+            return { ...m, readAt: new Date().toISOString() };
+          }
+          return m;
+        })
+      );
+    });
+
     return () => {
       channel.unbind_all();
-      pusherClient.unsubscribe(`private-conversation-${conversationId}`);
+      pusherClient.unsubscribe(channelName);
     };
   }, [conversationId, currentUserId]);
 
+  /* ------------------------------
+   UI
+  ------------------------------ */
   return (
     <div className="flex-1 overflow-y-auto bg-[#1a1d29] px-4 py-4 pb-32 space-y-4">
       {messages.map((msg) => {
@@ -68,14 +107,22 @@ export default function ChatMessage({
           minute: "2-digit",
         });
 
+        // Check if readAt exists and is valid
+        const isRead = Boolean(msg.readAt);
+
         return (
           <div
             key={msg.id}
             className={`flex ${isMe ? "justify-end" : "justify-start"}`}
           >
-            <div className="max-w-[70%] space-y-1">
+            <div
+              className={`max-w-[70%] space-y-1 ${
+                isMe ? "items-end flex flex-col" : ""
+              }`}
+            >
+              {/* Message bubble */}
               <div
-                className={`px-4 py-3 rounded-2xl ${
+                className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
                   isMe
                     ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-br-sm"
                     : "bg-[#2a2d3a] text-white rounded-bl-sm"
@@ -84,9 +131,24 @@ export default function ChatMessage({
                 {msg.content}
               </div>
 
-              <div className="flex items-center gap-1 text-xs text-gray-400 justify-end">
-                {time}
-                {isMe && <CheckCheck size={14} className="text-cyan-400" />}
+              {/* Time + Read receipt status */}
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <span>{time}</span>
+                {isMe && (
+                  <div className="flex items-center gap-1 transition-colors duration-300">
+                    <span
+                      className={
+                        isRead ? "text-cyan-400 font-medium" : "text-gray-500"
+                      }
+                    >
+                      {isRead ? "Read" : "Delivered"}
+                    </span>
+                    <CheckCheck
+                      size={16}
+                      className={isRead ? "text-cyan-400" : "text-gray-500"}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -95,14 +157,19 @@ export default function ChatMessage({
 
       {/* Typing indicator */}
       {typingUser && (
-        <div className="flex space-x-1">
-          {[0, 150, 300].map((delay) => (
-            <div
-              key={delay}
-              className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-500"
-              style={{ animationDelay: `${delay}ms` }}
-            />
-          ))}
+        <div className="flex gap-1 px-2 py-2">
+          <span className="text-xs text-gray-500 mr-2">
+            {typingUser} is typing
+          </span>
+          <div className="flex gap-1 items-center">
+            {[0, 150, 300].map((delay) => (
+              <span
+                key={delay}
+                className="h-1.5 w-1.5 rounded-full bg-gray-500 animate-bounce"
+                style={{ animationDelay: `${delay}ms` }}
+              />
+            ))}
+          </div>
         </div>
       )}
 
