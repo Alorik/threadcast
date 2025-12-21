@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   await pusherServer.trigger(
     `private-conversation-${conversationId}`,
-    `typing: ${type}`,
+    `typing:${type}`,
     {
       userId: session.user.id,
       username: session.user.username,

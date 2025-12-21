@@ -94,8 +94,8 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
 
       setShowEmojiPicker(false);
 
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
       }
       pusherClient.send_event(
         "typing:stop",

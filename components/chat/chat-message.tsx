@@ -20,58 +20,44 @@ export default function ChatMessage({
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-
-  useEffect(() => {
-    const channel = pusherClient.subscribe(
-      `private-conversation-${conversationId}`
-    );
-    channel.bind("typing:start", (data: any) => {
-      if (data.userId !== currentUserId) {
-        setTypingUser(data.username);
-      }
-    });
-
-    channel.bind("typing:stop", (data: any) => {
-      if (data.userId !== currentUserId) {
-        setTypingUser(null);
-      }
-    });
-    return () => {
-      channel.unbind_all();
-      pusherClient.unsubscribe(`private-conversation-${conversationId}`);
-    };
-  }, [conversationId, currentUserId]);
-
   // Always scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typingUser]);
 
-  // Pusher
   useEffect(() => {
     const channel = pusherClient.subscribe(
       `private-conversation-${conversationId}`
     );
 
+    // Handle new messages
     channel.bind("new-message", (message: Message) => {
       setMessages((prev) =>
         prev.some((m) => m.id === message.id) ? prev : [...prev, message]
       );
     });
 
-    channel.bind("typing:start", (data: { username: string }) => {
-      setTypingUser(data.username);
-    });
+    // Handle typing events
+    channel.bind(
+      "typing:start",
+      (data: { userId: string; username: string }) => {
+        if (data.userId !== currentUserId) {
+          setTypingUser(data.username);
+        }
+      }
+    );
 
-    channel.bind("typing:stop", () => {
-      setTypingUser(null);
+    channel.bind("typing:stop", (data: { userId: string }) => {
+      if (data.userId !== currentUserId) {
+        setTypingUser(null);
+      }
     });
 
     return () => {
       channel.unbind_all();
       pusherClient.unsubscribe(`private-conversation-${conversationId}`);
     };
-  }, [conversationId]);
+  }, [conversationId, currentUserId]);
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#1a1d29] px-4 py-4 pb-32 space-y-4">
@@ -109,8 +95,14 @@ export default function ChatMessage({
 
       {/* Typing indicator */}
       {typingUser && (
-        <div className="text-sm text-gray-400 px-2">
-          {typingUser} is typing...
+        <div className="flex space-x-1">
+          {[0, 150, 300].map((delay) => (
+            <div
+              key={delay}
+              className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-500"
+              style={{ animationDelay: `${delay}ms` }}
+            />
+          ))}
         </div>
       )}
 
