@@ -144,6 +144,7 @@ model Message {
   senderId       String
   content        String
   createdAt      DateTime      @default(now())
+  readAt         DateTime?
 
   conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
