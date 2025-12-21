@@ -31,6 +31,14 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    fetch("/api/chat/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId }),
+    });
+  }, [conversationId]);
+
   function handleTyping() {
     fetch("/api/chat/typing", {
       method: "POST",

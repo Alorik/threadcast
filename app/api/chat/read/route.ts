@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
+
+  
   await pusherServer.trigger(
     `private-conversation-${conversationId}`,
     "message:read",
