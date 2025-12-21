@@ -4,6 +4,7 @@ export type Message = {
   createdAt: string;
   conversationId: string;
   readAt: string | null;
+  mediaType: string;
 
   sender: {
     id: string;
