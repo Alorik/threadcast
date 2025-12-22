@@ -1,189 +1,202 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Smile, Paperclip, Send } from "lucide-react";
+import { Smile, Paperclip, Send, X } from "lucide-react";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import { pusherClient } from "@/lib/pusher-client";
 
 interface ChatInputProps {
   conversationId: string;
 }
 
 export default function ChatInput({ conversationId }: ChatInputProps) {
-  console.log("🔑 ChatInput conversationId:", conversationId);
-  const [inputValue, setInputValue] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [text, setText] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  /* -------------------- outside click for emoji -------------------- */
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handler = (e: MouseEvent) => {
       if (
         emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target as Node)
+        !emojiPickerRef.current.contains(e.target as Node)
       ) {
         setShowEmojiPicker(false);
       }
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  useEffect(() => {
-    fetch("/api/chat/read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId }),
-    });
-  }, [conversationId]);
-
+  /* -------------------- typing indicator -------------------- */
   function handleTyping() {
     fetch("/api/chat/typing", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId,
-        type: "start",
-      }),
+      body: JSON.stringify({ conversationId, type: "start" }),
     });
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     typingTimeoutRef.current = setTimeout(() => {
       fetch("/api/chat/typing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId,
-          type: "stop",
-        }),
+        body: JSON.stringify({ conversationId, type: "stop" }),
       });
     }, 1500);
   }
 
-  const sendMessage = async (e: React.FormEvent) => {
+  /* -------------------- image select -------------------- */
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function removeImage() {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  /* -------------------- send message -------------------- */
+  async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
-    if (!inputValue.trim() || isSending) return;
+    if (isSending) return;
+    if (!text.trim() && !imageFile) return;
 
     setIsSending(true);
-    const messageContent = inputValue;
-    setInputValue("");
-
-    console.log("📤 Sending message:", {
-      conversationId,
-      content: messageContent,
-    }); // ✅ Debug log
 
     try {
-      const response = await fetch("/api/chat/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      let payload: any = {
+        conversationId,
+        type: "TEXT",
+        content: text.trim(),
+      };
+
+      // 📸 Upload image if exists
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("file", imageFile);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) throw new Error("Image upload failed");
+
+        const { url } = await uploadRes.json();
+
+        payload = {
           conversationId,
-          content: messageContent,
-        }),
-      });
-
-      console.log("📥 Response status:", response.status); // ✅ Debug log
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("❌ Error response:", errorData); // ✅ Debug log
-        throw new Error("Failed to send message");
+          type: "IMAGE",
+          mediaUrl: url,
+        };
       }
 
-      const data = await response.json();
-      console.log("✅ Success:", data); // ✅ Debug log
-
-      setShowEmojiPicker(false);
-
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      pusherClient.send_event(
-        "typing:stop",
-        {},
-        `private-conversation-${conversationId}`
+      const res = await fetch(
+        `/api/chat/conversations/${conversationId}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
       );
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      setInputValue(messageContent);
-      alert("Failed to send message. Please try again.");
+
+      if (!res.ok) throw new Error("Message send failed");
+
+      // reset state
+      setText("");
+      removeImage();
+      setShowEmojiPicker(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send message");
     } finally {
       setIsSending(false);
     }
-  };
+  }
 
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    setInputValue((prev) => prev + emojiData.emoji);
+  /* -------------------- emoji -------------------- */
+  const onEmojiClick = (emoji: EmojiClickData) => {
+    setText((prev) => prev + emoji.emoji);
   };
 
   return (
-    <div className="flex w-full bg-[#0f1115] p-4 md:p-6 font-sans text-slate-200 items-center justify-center">
-      <div className="w-full max-w-2xl">
-        <form
-          onSubmit={sendMessage}
-          className="flex items-end gap-2 bg-white/5 border border-white/10
-          rounded-2xl p-2 pl-4 focus-within:border-cyan-500/50
-          focus-within:bg-slate-900/60 transition-all shadow-2xl
-          backdrop-blur-md"
-        >
-          <Paperclip className="text-slate-400 hover:text-white mb-1 cursor-pointer" />
-          <input
-            value={inputValue}
-            
-            onChange={(e) => {
-              setInputValue(e.target.value);
-              handleTyping();
-            }}
-            type="text"
-            placeholder="Type a message..."
-            disabled={isSending}
-            className="flex-1 bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 h-10 py-2.5 text-sm disabled:opacity-50"
+    <div className="bg-[#0f1115] p-4">
+      {/* Image Preview */}
+      {imagePreview && (
+        <div className="mb-3 relative w-32">
+          <img
+            src={imagePreview}
+            className="rounded-xl object-cover"
+            alt="preview"
           />
-          <div className="flex items-center justify-center gap-2">
-            <div className="relative" ref={emojiPickerRef}>
-              <Smile
-                className="text-slate-400 hover:text-white cursor-pointer mb-1"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              />
-              {showEmojiPicker && (
-                <div className="absolute bottom-12 right-0 z-50">
-                  <EmojiPicker
-                    onEmojiClick={handleEmojiClick}
-                    theme="dark"
-                    searchDisabled
-                    skinTonePickerLocation="PREVIEW"
-                    height={400}
-                    width={350}
-                  />
-                </div>
-              )}
-            </div>
+          <button
+            onClick={removeImage}
+            className="absolute -top-2 -right-2 bg-black/70 rounded-full p-1"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
-            <button
-              type="submit"
-              disabled={!inputValue.trim() || isSending}
-              className="p-2.5 rounded-xl bg-cyan-500 text-white hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 transition-colors shadow-lg shadow-cyan-500/20"
-            >
-              {isSending ? (
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Send
-                  size={14}
-                  fill="currentColor"
-                  className="items-center flex"
-                />
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+      <form
+        onSubmit={sendMessage}
+        className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-2"
+      >
+        {/* Image input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={handleImageSelect}
+        />
+
+        <Paperclip
+          onClick={() => fileInputRef.current?.click()}
+          className="cursor-pointer text-slate-400 hover:text-white"
+        />
+
+        <input
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            handleTyping();
+          }}
+          placeholder="Type a message..."
+          className="flex-1 bg-transparent outline-none text-sm text-white"
+        />
+
+        <div ref={emojiPickerRef} className="relative">
+          <Smile
+            onClick={() => setShowEmojiPicker((p) => !p)}
+            className="cursor-pointer text-slate-400 hover:text-white"
+          />
+          {showEmojiPicker && (
+            <div className="absolute bottom-12 right-0 z-50">
+              <EmojiPicker theme="dark" onEmojiClick={onEmojiClick} />
+            </div>
+          )}
+        </div>
+
+        <button
+          disabled={isSending}
+          className="bg-cyan-500 hover:bg-cyan-400 p-2 rounded-xl disabled:opacity-50"
+        >
+          <Send size={16} />
+        </button>
+      </form>
     </div>
   );
 }
