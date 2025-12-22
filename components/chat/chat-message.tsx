@@ -54,6 +54,8 @@ export default function ChatMessage({
 
     // New message
     channel.bind("new-message", (message: Message) => {
+      console.log("📨 Received new message:", message);
+      console.log("Type:", message.type, "MediaUrl:", message.mediaUrl);
       setMessages((prev) => {
         if (prev.some((m) => m.id === message.id)) return prev;
         return [...prev, message];
@@ -122,15 +124,12 @@ export default function ChatMessage({
             >
               {/* Message bubble */}
               <div
-                className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                className={`rounded-2xl text-sm leading-relaxed shadow-sm ${
                   isMe
                     ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-br-sm"
                     : "bg-[#2a2d3a] text-white rounded-bl-sm"
-                }`}
+                } ${msg.type === "IMAGE" ? "p-2" : "px-4 py-3"}`}
               >
-                {msg.type === "TEXT" && (
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                )}
                 {msg.type === "IMAGE" && msg.mediaUrl && (
                   <img
                     src={msg.mediaUrl}
@@ -138,6 +137,15 @@ export default function ChatMessage({
                     className="rounded-xl max-w-[240px] max-h-[320px] object-cover cursor-pointer"
                     loading="lazy"
                   />
+                )}
+                {msg.content && (
+                  <p
+                    className={`whitespace-pre-wrap ${
+                      msg.type === "IMAGE" && msg.mediaUrl ? "mt-2" : ""
+                    }`}
+                  >
+                    {msg.content}
+                  </p>
                 )}
               </div>
 

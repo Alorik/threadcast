@@ -1,4 +1,3 @@
-//api/chat/conversations/[id]/messages/route.ts
 import { authOptions } from "@/auth/config";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
@@ -15,8 +14,8 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: conversationId } = await params; // ✅ Get from URL
-    const { type, content, mediaUrl } = await req.json(); // ✅ Other data from body
+    const { id: conversationId } = await params;
+    const { type, content, mediaUrl } = await req.json();
 
     if (!conversationId || !type) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -71,19 +70,28 @@ export async function POST(
       return newMessage;
     });
 
+    // 🔥 FIX: Ensure the Pusher payload matches exactly what the frontend expects
+    const pusherPayload = {
+      id: message.id,
+      type: message.type, // Ensure this is "IMAGE" or "TEXT"
+      content: message.content || "", // Never send null
+      mediaUrl: message.mediaUrl || "", // Never send null
+      createdAt: message.createdAt.toISOString(),
+      readAt: message.readAt ? message.readAt.toISOString() : null,
+      sender: {
+        id: message.sender.id,
+        username: message.sender.username,
+        avatarUrl: message.sender.avatarUrl,
+      },
+    };
+
+    console.log("🚀 Pushing to Pusher:", pusherPayload); // Debug log
+
     // Push to Pusher
     await pusherServer.trigger(
       `private-conversation-${conversationId}`,
       "new-message",
-      {
-        id: message.id,
-        type: message.type,
-        content: message.content,
-        mediaUrl: message.mediaUrl,
-        createdAt: message.createdAt.toISOString(),
-        sender: message.sender,
-        readAt: message.readAt,
-      }
+      pusherPayload
     );
 
     return NextResponse.json(message, { status: 201 });
