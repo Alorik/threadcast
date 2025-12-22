@@ -131,12 +131,24 @@ export default function ChatMessage({
                 } ${msg.type === "IMAGE" ? "p-2" : "px-4 py-3"}`}
               >
                 {msg.type === "IMAGE" && msg.mediaUrl && (
-                  <img
-                    src={msg.mediaUrl}
-                    alt="sent image"
-                    className="rounded-xl max-w-[240px] max-h-[320px] object-cover cursor-pointer"
-                    loading="lazy"
-                  />
+                  <div
+                    className={`overflow-hidden rounded-2xl ${
+                      isMe ? "rounded-br-sm" : "rounded-bl-sm"
+                    }`}
+                  >
+                    <img
+                      src={msg.mediaUrl}
+                      alt="sent image"
+                      className="
+                        max-w-[280px]
+                        w-full
+                        h-auto
+                        rounded-xl
+                        object-cover
+                        border border-white/10"
+                      loading="lazy"
+                    />
+                  </div>
                 )}
                 {msg.content && (
                   <p
