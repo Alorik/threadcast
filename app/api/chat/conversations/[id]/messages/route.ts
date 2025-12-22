@@ -5,76 +5,64 @@ import { pusherServer } from "@/lib/pusher-server";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-
-export async function POST(req: NextRequest) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    console.log("📦 Received body:", body);
+    const { id: conversationId } = await params; // ✅ Get from URL
+    const { type, content, mediaUrl } = await req.json(); // ✅ Other data from body
 
-    const { conversationId, content } = body;
+    if (!conversationId || !type) {
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
 
-    console.log("🔍 Validation:", {
-      conversationId,
-      content,
-      hasConversationId: !!conversationId,
-      hasContent: !!content,
-    });
+    if (type === "TEXT" && !content) {
+      return NextResponse.json({ error: "Text required" }, { status: 400 });
+    }
 
-    if (!conversationId || !content) {
+    if (type === "IMAGE" && !mediaUrl) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Image URL required" },
         { status: 400 }
       );
     }
 
-    // Verify user is a member of this conversation
-    const conversation = await prisma.conversation.findFirst({
+    // Verify membership
+    const isMember = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
-        members: {
-          some: {
-            userId: session.user.id,
-          },
-        },
+        members: { some: { userId: session.user.id } },
       },
     });
 
-    if (!conversation) {
-      return NextResponse.json(
-        { error: "Conversation not found or access denied" },
-        { status: 404 }
-      );
+    if (!isMember) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    console.log("✅ Creating message...");
-
-    // Create message and update conversation in a transaction
+    // Use transaction for consistency
     const message = await prisma.$transaction(async (tx) => {
-      // Create the message
       const newMessage = await tx.message.create({
         data: {
-          content,
           conversationId,
           senderId: session.user.id,
+          type,
+          content: type === "TEXT" ? content : null,
+          mediaUrl: type === "IMAGE" ? mediaUrl : null,
         },
         include: {
           sender: {
-            select: {
-              id: true,
-              username: true,
-              avatarUrl: true,
-            },
+            select: { id: true, username: true, avatarUrl: true },
           },
         },
       });
 
-      // Update conversation's updatedAt timestamp
+      // Update conversation timestamp
       await tx.conversation.update({
         where: { id: conversationId },
         data: { updatedAt: new Date() },
@@ -83,38 +71,25 @@ export async function POST(req: NextRequest) {
       return newMessage;
     });
 
-    console.log("✅ Message created:", message.id);
-
-    // Trigger Pusher event
+    // Push to Pusher
     await pusherServer.trigger(
-      `conversation-${conversationId}`,
+      `private-conversation-${conversationId}`,
       "new-message",
       {
         id: message.id,
+        type: message.type,
         content: message.content,
+        mediaUrl: message.mediaUrl,
         createdAt: message.createdAt.toISOString(),
         sender: message.sender,
       }
     );
 
-    console.log("✅ Message sent via Pusher");
-
+    return NextResponse.json(message, { status: 201 });
+  } catch (err) {
+    console.error("❌ Message send error:", err);
     return NextResponse.json(
-      {
-        id: message.id,
-        content: message.content,
-        createdAt: message.createdAt.toISOString(),
-        sender: message.sender,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("❌ Error creating message:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to send message",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: "Failed to send message" },
       { status: 500 }
     );
   }
