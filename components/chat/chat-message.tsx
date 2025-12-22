@@ -133,7 +133,10 @@ export default function ChatMessage({
                 }`}
               >
                 {msg.type === "IMAGE" ? (
-                  <ImageMessage src={msg.mediaUrl!} />
+                  <ImageMessage
+                    src={msg.mediaUrl!}
+                    isOwn={msg.sender.id === currentUserId}
+                  />
                 ) : (
                   <p className="text-sm leading-relaxed">{msg.content}</p>
                 )}
