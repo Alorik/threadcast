@@ -19,7 +19,10 @@ export default function ImagePreviewModel({
     };
 
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => {
+      document.body.style.overflow = "auto";
+      window.removeEventListener("keydown", handler);
+    };
   }, [onClose]);
   return (
     <div
@@ -39,7 +42,7 @@ export default function ImagePreviewModel({
         height={280}
         width={280}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain animate-zoomIn"
+        className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain animate-[zoomIn_0.2s_ease-out]"
       />
     </div>
   );
