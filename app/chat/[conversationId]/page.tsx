@@ -8,13 +8,13 @@ import ChatLayout from "@/components/chat/chat-Layout";
 export default async function ChatPage({
   params,
 }: {
-  params: Promise<{ conversationId: string }>; // ✅ Changed to Promise
+  params: Promise<{ conversationId: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return <div>Please login</div>;
   }
-  const { conversationId } = await params; // ✅ Added await
+  const { conversationId } = await params;
 
   // 1️⃣ Fetch conversation + members
   const conversation = await prisma.conversation.findUnique({
@@ -69,9 +69,13 @@ export default async function ChatPage({
     orderBy: { createdAt: "asc" },
   });
 
+  // 🔥 FIX: Include ALL fields needed for images
   const messages = messagesFromDb.map((msg) => ({
     id: msg.id,
     content: msg.content,
+    type: msg.type, // ← ADD THIS
+    mediaUrl: msg.mediaUrl, // ← ADD THIS
+    readAt: msg.readAt ? msg.readAt.toISOString() : null, // ← ADD THIS
     createdAt: msg.createdAt.toISOString(),
     sender: msg.sender,
   }));

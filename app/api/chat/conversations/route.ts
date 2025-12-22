@@ -49,6 +49,8 @@ export async function GET() {
             content: true,
             createdAt: true,
             senderId: true,
+            type: true, 
+            mediaUrl: true,
           },
         },
       },

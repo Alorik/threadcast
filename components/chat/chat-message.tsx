@@ -4,12 +4,14 @@ import { pusherClient } from "@/lib/pusher-client";
 import { useEffect, useRef, useState } from "react";
 import { Message } from "@/types/chat";
 import { CheckCheck } from "lucide-react";
+import ImageMessage from "./image-message";
 
 interface ChatMessageProps {
   conversationId: string;
   initialMessages: Message[];
   currentUserId: string;
 }
+
 
 export default function ChatMessage({
   conversationId,
@@ -124,43 +126,18 @@ export default function ChatMessage({
             >
               {/* Message bubble */}
               <div
-                className={`rounded-2xl text-sm leading-relaxed shadow-sm ${
+                className={`px-3 py-2 rounded-2xl ${
                   isMe
                     ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-br-sm"
                     : "bg-[#2a2d3a] text-white rounded-bl-sm"
-                } ${msg.type === "IMAGE" ? "p-2" : "px-4 py-3"}`}
+                }`}
               >
-                {msg.type === "IMAGE" && msg.mediaUrl && (
-                  <div
-                    className={`overflow-hidden rounded-2xl ${
-                      isMe ? "rounded-br-sm" : "rounded-bl-sm"
-                    }`}
-                  >
-                    <img
-                      src={msg.mediaUrl}
-                      alt="sent image"
-                      className="
-                        max-w-[280px]
-                        w-full
-                        h-auto
-                        rounded-xl
-                        object-cover
-                        border border-white/10"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-                {msg.content && (
-                  <p
-                    className={`whitespace-pre-wrap ${
-                      msg.type === "IMAGE" && msg.mediaUrl ? "mt-2" : ""
-                    }`}
-                  >
-                    {msg.content}
-                  </p>
+                {msg.type === "IMAGE" ? (
+                  <ImageMessage src={msg.mediaUrl!} />
+                ) : (
+                  <p className="text-sm leading-relaxed">{msg.content}</p>
                 )}
               </div>
-
               {/* Time + Read receipt status */}
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <span>{time}</span>
