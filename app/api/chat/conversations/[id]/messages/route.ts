@@ -82,6 +82,7 @@ export async function POST(
         mediaUrl: message.mediaUrl,
         createdAt: message.createdAt.toISOString(),
         sender: message.sender,
+        readAt: message.readAt,
       }
     );
 

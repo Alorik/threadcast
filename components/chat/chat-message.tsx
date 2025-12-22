@@ -128,7 +128,17 @@ export default function ChatMessage({
                     : "bg-[#2a2d3a] text-white rounded-bl-sm"
                 }`}
               >
-                {msg.content}
+                {msg.type === "TEXT" && (
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                )}
+                {msg.type === "IMAGE" && msg.mediaUrl && (
+                  <img
+                    src={msg.mediaUrl}
+                    alt="sent image"
+                    className="rounded-xl max-w-[240px] max-h-[320px] object-cover cursor-pointer"
+                    loading="lazy"
+                  />
+                )}
               </div>
 
               {/* Time + Read receipt status */}
