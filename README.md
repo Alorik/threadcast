@@ -1,85 +1,132 @@
-Posts model
-	•	Create Post API
-	•	Feed UI
-	•	Likes model
-	•	Like/Unlike API
-	•	Like toggle UI
+🚀 ThreadCast — Phase 1 & 2
 
-Everything is polished, structured, and production-quality.
+Auth · Profiles · Posts · Likes
+
+ThreadCast is a full-stack social platform built with modern web architecture principles, focusing on correct data modeling, clean APIs, and scalable UI patterns.
+
+This document summarizes everything implemented so far.
 
 ⸻
 
-🚀 Super Social App — Phase 1 & 2 (Auth + Profile + Posts + Likes)
-
-A full-stack social media / collaborative platform built using:
-	•	Next.js App Router (React)
+🧱 Tech Stack
+	•	Next.js (App Router)
+	•	React + TypeScript
 	•	NextAuth (Credentials + OAuth)
 	•	Prisma ORM
 	•	PostgreSQL
-	•	TypeScript
-	•	Zod Validation
-
-This document summarizes everything implemented up to this point.
+	•	Zod (schema validation)
+	•	Tailwind CSS
 
 ⸻
 
 📦 Completed Features
 
+⸻
+
 ✅ Phase 1 — Authentication & Profile System
 
 🔐 Authentication
-	•	Email/password registration
+	•	Email + password registration
 	•	Credentials-based login
 	•	Google OAuth provider (optional)
-	•	Secure password hashing via bcrypt
+	•	Secure password hashing using bcrypt
 	•	JWT-based session strategy with NextAuth
 
-👤 User Profile
-	•	Onboarding flow for first-time users
-	•	GET /api/me endpoint to fetch profile
-	•	PATCH /api/me endpoint to update profile
-	•	Fields:
+👤 User Profile & Onboarding
+	•	First-time onboarding flow
+	•	Profile fetch & update APIs
+
+Endpoints
+	•	GET /api/me — fetch current user profile
+	•	PATCH /api/me — update profile data
+
+Profile Fields
 	•	email
 	•	username
 	•	bio
 	•	avatarUrl
-	•	onboarded flag (optional in system logic)
+	•	onboarded flag
 
 🔒 Protected Routes
-	•	NextAuth session checking
-	•	Redirects to onboarding if user missing username
-	•	Postman-tested session behavior
+	•	Server-side session validation
+	•	Redirects for unauthenticated users
+	•	Onboarding enforced if profile incomplete
 
-🧪 Postman Fully Tested
-	•	Register
+🧪 Fully Tested (Postman)
+	•	Registration
 	•	Login (Credentials)
-	•	GET /api/me
-	•	PATCH /api/me
-	•	Session cookies working correctly
+	•	Session persistence
+	•	Profile fetch & update
 
 ⸻
 
 🎨 Frontend Screens (Phase 1)
-
-/auth/login
-	•	Simple login form
-	•	Uses signIn("credentials")
-
-/auth/register
-	•	Registration form (email, username, password)
-	•	No auto-sign-in
-	•	Redirects to login after success
-
-/auth/error
-	•	Handles NextAuth error states
-
-/onboarding
-	•	Updates username, bio, avatar
-	•	Uses PATCH /api/me
+	•	/auth/login — credentials login
+	•	/auth/register — user registration
+	•	/auth/error — NextAuth error handling
+	•	/onboarding — profile completion
 
 ⸻
 
-📂 Folder Structure (Important Parts)
+✅ Phase 2 — Posts & Likes System (Complete)
+
+⸻
+
+📝 Posts System
+
+📐 Prisma Model
+	•	User → Post (1-to-many)
+	•	Clean, extensible schema
+
+🔌 API Routes
+
+POST /api/posts
+	•	Creates a new post
+	•	Auth-protected
+	•	Zod-validated input
+
+GET /api/posts
+	•	Fetches feed (latest first)
+	•	Includes:
+	•	Author data
+	•	Like count
+	•	Whether the current user liked the post
+
+⸻
+
+🖥️ Feed UI (/feed)
+	•	Server Component rendered feed
+	•	Displays:
+	•	Username
+	•	Post content
+	•	Timestamp
+	•	Like count
+	•	Like toggle button
+
+✍️ Create Post Form
+	•	Client component
+	•	Calls POST /api/posts
+	•	Uses router.refresh() for instant feed updates
+	•	No client-side state hacks
+
+⸻
+
+❤️ Likes System
+
+📐 Prisma Model
+	•	Dedicated Like model
+	•	Unique constraint: (userId, postId)
+
+🔌 API Routes
+
+POST /api/posts/[postId]/like
+	•	Likes a post
+	•	Safely handles already-liked cases
+
+DELETE /api/posts/[postId]/like
+	•	Unlikes a post
+
+📂 Key Folder Structure
 
 
 app/
@@ -89,18 +136,18 @@ app/
  │   │   └─ register/route.ts
  │   ├─ me/route.ts
  │   ├─ posts/
- │   │   ├─ route.ts           (GET + POST posts)
+ │   │   ├─ route.ts
  │   │   └─ [postId]/
- │   │       └─ like/route.ts  (POST like, DELETE unlike)
+ │   │       └─ like/route.ts
  │
  ├─ auth/
  │   ├─ login/page.tsx
  │   ├─ register/page.tsx
- │   ├─ error/page.tsx
+ │   └─ error/page.tsx
  │
  ├─ onboarding/page.tsx
  ├─ feed/page.tsx
- │
+
 components/
  ├─ create-post-form.tsx
  └─ like-button.tsx
@@ -110,85 +157,10 @@ prisma/
 
 
 
- 🧑‍💻 Phase 2 — Post System & Likes (Complete)
 
-📝 Post System
-✔️ API Routes
+🏁 Current Status
 
-POST /api/posts
-	•	Creates a new post
-	•	Requires authentication
-	•	Zod-validates content
+✔ Phase 1 — Auth, Sessions, Profiles, Onboarding
+✔ Phase 2 — Posts, Feed UI, Likes, Toggle Logic
 
-GET /api/posts
-	•	Returns all posts (latest first)
-	•	Includes:
-	•	author data
-	•	like count
-	•	whether current user liked the post
-
-✔️ Frontend Feed UI (/feed)
-	•	Server component rendered feed
-	•	Includes:
-	•	username
-	•	content
-	•	timestamp
-	•	like count
-	•	LikeButton
-
-✔️ Create Post Form
-	•	Client component (create-post-form.tsx)
-	•	Calls POST /api/posts
-	•	Uses router.refresh() to update feed instantly
-
-⸻
-
-❤️ Likes System
-
-✔️ Prisma Model
-
-✔️ API: Like & Unlike
-
-POST /api/posts/[postId]/like
-	•	Likes a post
-	•	Handles unique constraint (already liked)
-
-DELETE /api/posts/[postId]/like
-	•	Unlikes a post
-
-✔️ Like Button UI (Toggle)
-
-<LikeButton postId="" liked={boolean} />
-	•	Shows Like or Unlike based on whether the user has liked the post
-	•	Calls appropriate API route
-	•	Refreshes the server component feed on action
-🏁 Status
-
-✔️ Phase 1 Finished
-
-Authentication + Profile + Sessions + Onboarding
-
-✔️ Phase 2 (Part 1) Finished
-
-Posts + Feed UI + Likes + Toggle UI
-🎯 Next Possible Steps
-
-Choose one to continue:
-
-1️⃣ Comments / Replies
-	•	Add parentId to Post
-	•	Thread system like Twitter
-
-2️⃣ Media Upload (Images)
-	•	Use Supabase storage or Next.js upload route
-	•	Image attachments for posts
-
-3️⃣ Realtime Updates
-	•	Pusher / WebSockets for:
-	•	likes updating live
-	•	new posts appearing instantly
-
-4️⃣ Protect Pages with Middleware
-	•	Redirect logged-out users from /feed, /onboarding, etc.
-
-5️⃣ User Profiles & Public Pages
+Architecture is stable, scalable, and production-ready.
