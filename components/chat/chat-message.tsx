@@ -12,7 +12,6 @@ interface ChatMessageProps {
   currentUserId: string;
 }
 
-
 export default function ChatMessage({
   conversationId,
   initialMessages,
@@ -33,7 +32,6 @@ export default function ChatMessage({
    Mark messages as READ
   ------------------------------ */
   useEffect(() => {
-    // Check if there are any unread messages from the OTHER user
     const unreadMessages = messages.filter(
       (m) => m.sender.id !== currentUserId && !m.readAt
     );
@@ -80,11 +78,21 @@ export default function ChatMessage({
       }
     });
 
+    // Message deleted
+    channel.bind("message:deleted", (data: { id: string; content: string }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === data.id
+            ? { ...m, content: data.content, type: "TEXT", mediaUrl: null }
+            : m
+        )
+      );
+    });
+
     // Read receipts
     channel.bind("messages:read", () => {
       setMessages((prev) =>
         prev.map((m) => {
-          // If the message was sent by ME and is currently unread, mark it as read
           if (m.sender.id === currentUserId && !m.readAt) {
             return { ...m, readAt: new Date().toISOString() };
           }
@@ -110,8 +118,6 @@ export default function ChatMessage({
           hour: "2-digit",
           minute: "2-digit",
         });
-
-        // Check if readAt exists and is valid
         const isRead = Boolean(msg.readAt);
 
         return (
@@ -132,15 +138,18 @@ export default function ChatMessage({
                     : "bg-[#2a2d3a] text-white rounded-bl-sm"
                 }`}
               >
-                {msg.type === "IMAGE" ? (
+                {msg.type === "IMAGE" && msg.mediaUrl ? (
                   <ImageMessage
-                    src={msg.mediaUrl!}
-                    isOwn={msg.sender.id === currentUserId}
+                    src={msg.mediaUrl}
+                    alt={`Image from ${msg.sender.username}`}
+                    isOwn={isMe}
+                    messageId={msg.id}
                   />
                 ) : (
                   <p className="text-sm leading-relaxed">{msg.content}</p>
                 )}
               </div>
+
               {/* Time + Read receipt status */}
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <span>{time}</span>

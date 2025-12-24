@@ -9,12 +9,14 @@ interface ImageMessageProps {
   src: string;
   isOwn?: boolean;
   alt: string;
+  messageId?: string;
 }
 
 export default function ImageMessage({
   src,
   alt = "sent image",
   isOwn,
+  messageId,
 }: ImageMessageProps) {
   const [loaded, setLoaded] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -51,10 +53,30 @@ export default function ImageMessage({
     setMenuOpen(false);
   };
 
-  const handleDelete = () => {
-    // Add delete logic here
-    console.log("Delete image");
+  const handleDelete = async () => {
+    if (!messageId) {
+      console.error("No messageId provided");
+      setMenuOpen(false);
+      return;
+    }
+
+    console.log("🗑️ Deleting message with ID:", messageId);
     setMenuOpen(false);
+
+    try {
+      const response = await fetch(`/api/chat/messages/${messageId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Delete failed with status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Delete API response:", result);
+    } catch (error) {
+      console.error("❌ Error deleting image:", error);
+    }
   };
 
   // Close menu when clicking outside
