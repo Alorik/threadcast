@@ -16,7 +16,7 @@ export async function GET() {
       take: 10,
       orderBy: [{ likes: { _count: "desc" } }, { createdAt: "desc" }],
       include: {
-        author: {
+        user: {
           select: {
             id: true,
             username: true,
@@ -26,6 +26,7 @@ export async function GET() {
         _count: {
           select: {
             likes: true,
+            comments: true,
           },
         },
         likes: userId
