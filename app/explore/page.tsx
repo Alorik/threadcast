@@ -2,13 +2,15 @@ import { authOptions } from "@/auth/config";
 import LikeButton from "@/components/like-button";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import Image from "next/image";
+import { Flame, TrendingUp } from "lucide-react";
 
 export default async function ExplorePage() {
   const session = await getServerSession(authOptions);
+
   if (!session) {
-    return NextResponse.json({ error: "Unuserized" }, { status: 401 });
+    redirect("/api/auth/signin");
   }
 
   const userId = session?.user?.id;
@@ -37,65 +39,109 @@ export default async function ExplorePage() {
         : false,
     },
   });
+
   return (
-    <div className="max-w-2xl mx-auto py-8 space-y-6">
-      {/* Page Header */}
-      <h1 className="text-2xl font-bold text-white">Explore 🔥</h1>
+    <div className="min-h-screen bg-[#0f1115] text-slate-200 font-sans selection:bg-rose-500/30">
+      {/* Static Background Decor */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-rose-900/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-indigo-900/10 rounded-full blur-[120px]" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
+      </div>
 
-      {/* Trending Posts */}
-      <div className="space-y-4">
-        {trendingPosts.map((post) => {
-          const likedByMe = post.likes?.length > 0;
+      <div className="relative z-10 max-w-6xl mx-auto py-12 px-4">
+        {/* Header */}
+        <header className="mb-10 flex items-center gap-3">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-500/20 to-rose-500/20 border border-orange-500/20 text-orange-400 shadow-lg shadow-orange-900/20">
+            <Flame size={24} fill="currentColor" className="opacity-80" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-white tracking-tight">
+              Explore
+            </h1>
+            <p className="text-sm text-slate-500 font-medium flex items-center gap-2">
+              <TrendingUp size={14} /> Trending today
+            </p>
+          </div>
+        </header>
 
-          return (
-            <div
-              key={post.id}
-              className="rounded-xl border border-white/10 bg-[#0f1115] p-4 space-y-3"
-            >
-              {/* user */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-700 overflow-hidden">
-                  {post.user.avatarUrl ? (
-                    <Image
-                      src={post.user.avatarUrl}
-                      alt={post.user.username}
-                      width={40}
-                      height={40}
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white font-bold">
-                      {post.user.username[0].toUpperCase()}
-                    </div>
-                  )}
+        {/* Trending Posts Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {trendingPosts.map((post, index) => {
+            const likedByMe = post.likes?.length > 0;
+
+            return (
+              <div
+                key={post.id}
+                className="group relative bg-[#16181d] hover:bg-[#1a1d24] border border-white/5 hover:border-white/10 rounded-3xl p-6 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-black/40 flex flex-col"
+              >
+                {/* Rank Badge */}
+                <div className="absolute -left-3 -top-3 w-8 h-8 rounded-full bg-[#20222a] border border-white/5 flex items-center justify-center text-xs font-bold text-slate-500 shadow-lg z-20 group-hover:scale-110 transition-transform">
+                  #{index + 1}
                 </div>
 
-                <span className="text-white font-medium">
-                  @{post.user.username}
-                </span>
-              </div>
+                <div className="flex items-start gap-4 flex-1">
+                  {/* Avatar */}
+                  <div className="relative shrink-0 group/avatar cursor-pointer">
+                    <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-br from-slate-700 to-slate-800 group-hover/avatar:from-indigo-500 group-hover/avatar:to-rose-500 transition-colors duration-300">
+                      <div className="w-full h-full rounded-full overflow-hidden bg-[#16181d] relative">
+                        {post.user.avatarUrl ? (
+                          <Image
+                            src={post.user.avatarUrl}
+                            alt={post.user.username}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white font-bold bg-slate-800 text-sm">
+                            {post.user.username[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Content */}
-              <p className="text-slate-200 text-sm leading-relaxed">
-                {post.content}
-              </p>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 pt-1 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-bold text-slate-100 text-sm hover:text-indigo-400 transition-colors cursor-pointer truncate max-w-[120px]">
+                        @{post.user.username}
+                      </span>
+                      <span className="text-[10px] text-slate-600 font-medium bg-white/5 px-2 py-1 rounded-full border border-white/5 shrink-0">
+                        {new Date(post.createdAt).toLocaleDateString(
+                          undefined,
+                          { month: "short", day: "numeric" }
+                        )}
+                      </span>
+                    </div>
 
-              {/* Footer */}
-              <div className="flex items-center gap-4 text-sm text-slate-400">
-                <LikeButton
-                  postId={post.id}
-                  liked={likedByMe}
-                  likeCount={post._count.likes}
-                />
-                <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                    <p className="text-slate-300 text-[15px] leading-relaxed mb-4 font-light whitespace-pre-wrap flex-grow">
+                      {post.content}
+                    </p>
+
+                    {/* Footer Actions */}
+                    <div className="flex items-center gap-6 pt-3 border-t border-white/5 mt-auto">
+                      <div className="flex items-center gap-2 group/like">
+                        <div className="p-1.5 rounded-full group-hover/like:bg-white/5 transition-colors">
+                          <LikeButton postId={post.id} liked={likedByMe} />
+                        </div>
+                        <span className="text-xs text-slate-500 font-medium group-hover/like:text-slate-300 transition-colors">
+                          {post._count.likes} likes
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+            );
+          })}
+
+          {trendingPosts.length === 0 && (
+            <div className="col-span-full py-20 text-center rounded-3xl border border-dashed border-white/10 bg-white/[0.02]">
+              <p className="text-slate-500 text-sm">No trending posts found.</p>
             </div>
-          );
-        })}
-
-        {trendingPosts.length === 0 && (
-          <p className="text-slate-500 text-sm">No trending posts yet.</p>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
