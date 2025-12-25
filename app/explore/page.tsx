@@ -1,10 +1,13 @@
+//explore/page.tsx;
+
 import { authOptions } from "@/auth/config";
 import LikeButton from "@/components/like-button";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { Flame, TrendingUp } from "lucide-react";
+import { Flame, Link, TrendingUp } from "lucide-react";
+
 
 export default async function ExplorePage() {
   const session = await getServerSession(authOptions);

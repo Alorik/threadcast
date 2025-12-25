@@ -14,5 +14,7 @@ export default async function Page({ params }: { params: { postId: string } }) {
   });
 
   if (!post) return null;
-  return <ExplorePostModal post={post} />;
+  return <div>
+    <ExplorePostModal post={post} />
+  </div> 
 }
