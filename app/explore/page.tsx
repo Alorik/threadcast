@@ -14,11 +14,15 @@ export default async function ExplorePage() {
   }
 
   const userId = session?.user?.id;
-
   const trendingPosts = await prisma.post.findMany({
     take: 10,
     orderBy: [{ likes: { _count: "desc" } }, { createdAt: "desc" }],
-    include: {
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      type: true,
+
       user: {
         select: {
           id: true,
@@ -26,11 +30,21 @@ export default async function ExplorePage() {
           avatarUrl: true,
         },
       },
+
+      media: {
+        select: {
+          id: true,
+          url: true,
+          type: true,
+        },
+      },
+
       _count: {
         select: {
           likes: true,
         },
       },
+
       likes: userId
         ? {
             where: { userId },
@@ -69,6 +83,7 @@ export default async function ExplorePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {trendingPosts.map((post, index) => {
             const likedByMe = post.likes?.length > 0;
+            const firstMedia = post.media?.[0]; // Get first media item
 
             return (
               <div
@@ -118,6 +133,27 @@ export default async function ExplorePage() {
                     <p className="text-slate-300 text-[15px] leading-relaxed mb-4 font-light whitespace-pre-wrap flex-grow">
                       {post.content}
                     </p>
+
+                    {/* Media Display - Fixed */}
+                    {firstMedia && (
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden mb-4 bg-slate-900 border border-white/5">
+                        {firstMedia.type === "IMAGE" ? (
+                          <Image
+                            src={firstMedia.url}
+                            alt="Post media"
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          />
+                        ) : firstMedia.type === "VIDEO" ? (
+                          <video
+                            src={firstMedia.url}
+                            controls
+                            className="w-full h-full object-cover"
+                          />
+                        ) : null}
+                      </div>
+                    )}
 
                     {/* Footer Actions */}
                     <div className="flex items-center gap-6 pt-3 border-t border-white/5 mt-auto">
