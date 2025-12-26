@@ -4,8 +4,10 @@ import Image from "next/image";
 import { MoreVertical, Phone, Video } from "lucide-react";
 import { usePresence } from "@/app/providers/presence-provider";
 import { useEffect } from "react";
+import CallButton from "./call-button";
 
 type ChatHeaderProps = {
+  conversationId: string,
   otherUser: {
     id: string;
     avatarUrl: string | null;
@@ -13,7 +15,7 @@ type ChatHeaderProps = {
   } | null;
 };
 
-export default function ChatHeader({ otherUser }: ChatHeaderProps) {
+export default function ChatHeader({ conversationId ,otherUser }: ChatHeaderProps) {
   const { onlineUsers } = usePresence();
 
   const isOnline = otherUser?.id ? onlineUsers.has(otherUser.id) : false;
@@ -72,10 +74,7 @@ export default function ChatHeader({ otherUser }: ChatHeaderProps) {
             size={20}
             className="cursor-pointer hover:text-white transition"
           />
-          <Video
-            size={20}
-            className="cursor-pointer hover:text-white transition"
-          />
+          <CallButton conversationId={conversationId } />
           <div className="w-px h-6 bg-white/20 mx-2" />
           <MoreVertical
             size={20}
