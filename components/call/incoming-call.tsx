@@ -80,7 +80,7 @@ export default function IncomingCallListener({
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
       <div className="bg-[#16181d] p-6 rounded-2xl space-y-4">
         <h2 className="text-white font-semibold text-lg">Incoming Call</h2>
-        <p className="text-white/60">{caller.username} is calling...</p>
+        <p className="text-white/60">calling...</p>
         <div className="flex gap-4">
           <button
             onClick={handleAccept}

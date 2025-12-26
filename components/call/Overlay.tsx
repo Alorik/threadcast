@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { pusherClient } from "@/lib/pusher-client";
 import { createPeerConnection } from "@/lib/webrtc";
 
@@ -16,6 +16,11 @@ export default function CallOverlay({
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+
+  const [permissionState, setPermissionState] = useState<
+    "pending" | "granted" | "denied"
+  >("pending");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   /* ---------------------------
      Helper to send signaling via API
@@ -37,46 +42,110 @@ export default function CallOverlay({
   }
 
   /* ---------------------------
+     Request Media Permissions
+  --------------------------- */
+  async function requestMediaPermissions() {
+    try {
+      setErrorMessage("");
+      
+      // Check if mediaDevices is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setErrorMessage(
+          "Your browser doesn't support camera/microphone access. Please use Chrome, Edge, or Firefox."
+        );
+        setPermissionState("denied");
+        return null;
+      }
+
+      const localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      setPermissionState("granted");
+      return localStream;
+    } catch (error) {
+      console.error("Failed to get media permissions:", error);
+      setPermissionState("denied");
+
+      // Provide specific error messages
+      if (error instanceof DOMException) {
+        switch (error.name) {
+          case "NotAllowedError":
+            setErrorMessage(
+              "Camera/Microphone access denied. Please:\n\n" +
+              "1. Click the camera icon in your browser's address bar\n" +
+              "2. Allow camera and microphone access\n" +
+              "3. On Windows 11: Go to Settings > Privacy & Security > Camera/Microphone and enable access\n" +
+              "4. Reload this page"
+            );
+            break;
+          case "NotFoundError":
+            setErrorMessage(
+              "No camera or microphone found on your device. Please connect a camera/microphone and try again."
+            );
+            break;
+          case "NotReadableError":
+            setErrorMessage(
+              "Camera or microphone is already in use by another application. Please close other apps using the camera/mic and try again."
+            );
+            break;
+          case "OverconstrainedError":
+            setErrorMessage(
+              "Your camera or microphone doesn't meet the requirements. Try using different hardware."
+            );
+            break;
+          default:
+            setErrorMessage(
+              `Error accessing media devices: ${error.message || "Unknown error"}`
+            );
+        }
+      } else {
+        setErrorMessage("An unexpected error occurred. Please try again.");
+      }
+
+      return null;
+    }
+  }
+
+  /* ---------------------------
      Setup media + peer
   --------------------------- */
   useEffect(() => {
     async function init() {
-      try {
-        const localStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        localStreamRef.current = localStream;
+      const localStream = await requestMediaPermissions();
+      
+      if (!localStream) {
+        return;
+      }
 
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = localStream;
-        }
+      localStreamRef.current = localStream;
 
-        
-        const pc = createPeerConnection(
-          (remoteStream) => {
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.srcObject = remoteStream;
-            }
-          },
-          (candidate) => {
-            sendSignal("call:ice-candidate", candidate.toJSON());
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStream;
+      }
+
+      const pc = createPeerConnection(
+        (remoteStream) => {
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
           }
-        );
-
-        localStream
-          .getTracks()
-          .forEach((track) => pc.addTrack(track, localStream));
-
-        pcRef.current = pc;
-
-        if (isCaller) {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          await sendSignal("call:offer", offer);
+        },
+        (candidate) => {
+          sendSignal("call:ice-candidate", candidate.toJSON());
         }
-      } catch (error) {
-        console.error("Failed to initialize call:", error);
+      );
+
+      localStream
+        .getTracks()
+        .forEach((track) => pc.addTrack(track, localStream));
+
+      pcRef.current = pc;
+
+      if (isCaller) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await sendSignal("call:offer", offer);
       }
     }
 
@@ -105,13 +174,6 @@ export default function CallOverlay({
         await sendSignal("call:answer", answer);
       } catch (error) {
         console.error("Failed to handle offer:", error);
-      }
-    });
-    channel.bind("call:ice-candidate", async (candidate) => {
-      try {
-        await pcRef.current?.addIceCandidate(candidate);
-      } catch (err) {
-        console.error("ICE add error", err);
       }
     });
 
@@ -146,6 +208,42 @@ export default function CallOverlay({
   /* ---------------------------
      UI
   --------------------------- */
+  
+  // Show permission request screen
+  if (permissionState === "pending" || permissionState === "denied") {
+    return (
+      <div className="fixed inset-0 z-[999] bg-black flex items-center justify-center">
+        <div className="bg-[#16181d] p-8 rounded-2xl max-w-md space-y-4">
+          <h2 className="text-white font-semibold text-xl">
+            {permissionState === "pending"
+              ? "Requesting Permissions..."
+              : "Permission Denied"}
+          </h2>
+          
+          {errorMessage && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+              <p className="text-red-400 text-sm whitespace-pre-line">
+                {errorMessage}
+              </p>
+            </div>
+          )}
+
+          {permissionState === "denied" && (
+            <button
+              onClick={() => {
+                setPermissionState("pending");
+                requestMediaPermissions();
+              }}
+              className="w-full px-4 py-3 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
+            >
+              Try Again
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-[999] bg-black flex ">
       <video

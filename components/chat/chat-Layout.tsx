@@ -10,7 +10,6 @@ import ChatSidebar from "./chat-sidebar";
 
 import { Message } from "@/types/chat";
 import IncomingCallListener from "../call/incoming-call";
-import LocalMediaPreview from "../call/LocalMediaPreview";
 import CallOverlay from "../call/Overlay";
 
 interface ChatLayoutProps {
@@ -40,6 +39,9 @@ export default function ChatLayout({
     };
   } | null>(null);
 
+  const [isInCall, setIsInCall] = useState(false);
+  const [isCaller, setIsCaller] = useState(false);
+
   /* ------------------------------
      Pusher — Call Signaling
   ------------------------------ */
@@ -47,39 +49,73 @@ export default function ChatLayout({
     const channelName = `private-conversation-${conversationId}`;
     const channel = pusherClient.subscribe(channelName);
 
-    channel.bind("call:incoming", (data) => {
-      console.log("📞 Incoming call:", data);
-      setIncomingCall(data);
+    channel.bind(
+      "call:incoming",
+      (data: {
+        fromUser: { id: string; username: string };
+        userId: string;
+      }) => {
+        console.log("📞 Incoming call:", data);
+
+        // Only show incoming call modal if I'm NOT the one who initiated the call
+        if (data.userId !== currentUserId) {
+          setIncomingCall(data);
+        }
+      }
+    );
+
+    channel.bind("call:accepted", () => {
+      console.log("✅ Call accepted");
+      setIncomingCall(null);
+      setIsInCall(true);
+    });
+
+    channel.bind("call:rejected", () => {
+      console.log("❌ Call rejected");
+      setIncomingCall(null);
+      setIsInCall(false);
+      setIsCaller(false);
     });
 
     channel.bind("call:ended", () => {
+      console.log("📴 Call ended");
       setIncomingCall(null);
+      setIsInCall(false);
+      setIsCaller(false);
     });
 
     return () => {
       channel.unbind_all();
       pusherClient.unsubscribe(channelName);
     };
-  }, [conversationId]);
+  }, [conversationId, currentUserId]);
 
   /* ------------------------------
      Accept / Reject handlers
   ------------------------------ */
   const acceptCall = async () => {
-    await fetch("/api/chat/call/accept", {
+    await fetch("/api/call/signal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId }),
+      body: JSON.stringify({
+        conversationId,
+        type: "call:accepted",
+      }),
     });
 
     setIncomingCall(null);
+    setIsInCall(true);
+    setIsCaller(false); // I'm the receiver
   };
 
   const rejectCall = async () => {
-    await fetch("/api/chat/call/reject", {
+    await fetch("/api/call/signal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId }),
+      body: JSON.stringify({
+        conversationId,
+        type: "call:rejected",
+      }),
     });
 
     setIncomingCall(null);
@@ -98,7 +134,14 @@ export default function ChatLayout({
       {/* Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <ChatHeader conversationId={conversationId} otherUser={otherUser} />
+        <ChatHeader
+          conversationId={conversationId}
+          otherUser={otherUser}
+          onCallStart={() => {
+            setIsCaller(true);
+            setIsInCall(true);
+          }}
+        />
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto">
@@ -113,15 +156,20 @@ export default function ChatLayout({
         <ChatInput conversationId={conversationId} />
       </div>
 
-      {/* Incoming Call Modal */}
-      {incomingCall && (
+      {/* Incoming Call Modal - Only show if NOT the caller */}
+      {incomingCall && !isCaller && (
         <IncomingCallListener
           caller={incomingCall.fromUser}
           onAccept={acceptCall}
           onReject={rejectCall}
+          conversationId={conversationId}
         />
       )}
 
+      {/* Call Overlay - Show when in active call */}
+      {isInCall && (
+        <CallOverlay conversationId={conversationId} isCaller={isCaller} />
+      )}
     </div>
   );
 }
