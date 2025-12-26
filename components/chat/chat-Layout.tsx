@@ -138,8 +138,11 @@ export default function ChatLayout({
           conversationId={conversationId}
           otherUser={otherUser}
           onCallStart={() => {
+            console.log("🎬 onCallStart called!");
+            console.log("Setting isCaller=true, isInCall=true");
             setIsCaller(true);
             setIsInCall(true);
+            console.log("State set:", { isCaller: true, isInCall: true });
           }}
         />
 
@@ -168,7 +171,15 @@ export default function ChatLayout({
 
       {/* Call Overlay - Show when in active call */}
       {isInCall && (
-        <CallOverlay conversationId={conversationId} isCaller={isCaller} />
+        <CallOverlay
+          conversationId={conversationId}
+          isCaller={isCaller}
+          onEndCall={() => {
+            setIsInCall(false);
+            setIsCaller(false);
+            setIncomingCall(null);
+          }}
+        />
       )}
     </div>
   );

@@ -6,23 +6,26 @@ import { createPeerConnection } from "@/lib/webrtc";
 interface CallOverlayProps {
   conversationId: string;
   isCaller: boolean;
+  onEndCall?: () => void;
 }
 
 export default function CallOverlay({
   conversationId,
   isCaller,
+  onEndCall,
 }: CallOverlayProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
 
   const [permissionState, setPermissionState] = useState<
     "pending" | "granted" | "denied"
   >("pending");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
-  const [hasLocalVideo, setHasLocalVideo] = useState(true);
+  const [connectionState, setConnectionState] = useState<string>("new");
 
   /* ---------------------------
      Helper to send signaling via API
@@ -53,7 +56,6 @@ export default function CallOverlay({
     try {
       setErrorMessage("");
 
-      // Check if running in secure context
       if (!window.isSecureContext) {
         setErrorMessage(
           "Camera/Microphone access requires a secure connection (HTTPS).\n\n" +
@@ -66,15 +68,10 @@ export default function CallOverlay({
         return null;
       }
 
-      // Check if mediaDevices is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setErrorMessage(
           "Your browser doesn't support camera/microphone access.\n\n" +
-            "Please use:\n" +
-            "• Chrome (version 53+)\n" +
-            "• Edge (version 79+)\n" +
-            "• Firefox (version 36+)\n" +
-            "• Safari (version 11+)"
+            "Please use Chrome, Edge, Firefox, or Safari."
         );
         setPermissionState("denied");
         return null;
@@ -89,63 +86,29 @@ export default function CallOverlay({
       return localStream;
     } catch (error) {
       console.error("Failed to get media permissions:", error);
-
-      // If video fails, try audio only
-      if (error instanceof DOMException && error.name === "NotReadableError") {
-        try {
-          console.log("⚠️ Camera busy, trying audio only...");
-          const audioStream = await navigator.mediaDevices.getUserMedia({
-            video: false,
-            audio: true,
-          });
-          setPermissionState("granted");
-          setErrorMessage("Camera is in use. Audio-only mode enabled.");
-          return audioStream;
-        } catch (audioError) {
-          console.error("Audio-only also failed:", audioError);
-        }
-      }
-
       setPermissionState("denied");
 
-      // Provide specific error messages
       if (error instanceof DOMException) {
         switch (error.name) {
           case "NotAllowedError":
             setErrorMessage(
-              "Camera/Microphone access denied. Please:\n\n" +
-                "1. Click the camera icon in your browser's address bar\n" +
-                "2. Allow camera and microphone access\n" +
-                "3. On Windows 11: Go to Settings > Privacy & Security > Camera/Microphone and enable access\n" +
-                "4. Reload this page"
+              "Camera/Microphone access denied. Please allow permissions and try again."
             );
             break;
           case "NotFoundError":
             setErrorMessage(
-              "No camera or microphone found on your device. Please connect a camera/microphone and try again."
+              "No camera or microphone found. Please connect a device."
             );
             break;
           case "NotReadableError":
             setErrorMessage(
-              "Camera or microphone is already in use by another application. Please close other apps using the camera/mic and try again."
-            );
-            break;
-          case "OverconstrainedError":
-            setErrorMessage(
-              "Your camera or microphone doesn't meet the requirements. Try using different hardware."
+              "Camera/microphone is in use by another application."
             );
             break;
           default:
-            setErrorMessage(
-              `Error accessing media devices: ${
-                error.message || "Unknown error"
-              }`
-            );
+            setErrorMessage(`Error: ${error.message || "Unknown error"}`);
         }
-      } else {
-        setErrorMessage("An unexpected error occurred. Please try again.");
       }
-
       return null;
     }
   }
@@ -155,11 +118,10 @@ export default function CallOverlay({
   --------------------------- */
   useEffect(() => {
     async function init() {
-      const localStream = await requestMediaPermissions();
+      console.log("🎬 Initializing call...", { isCaller });
 
-      if (!localStream) {
-        return;
-      }
+      const localStream = await requestMediaPermissions();
+      if (!localStream) return;
 
       localStreamRef.current = localStream;
 
@@ -169,24 +131,40 @@ export default function CallOverlay({
 
       const pc = createPeerConnection(
         (remoteStream) => {
+          console.log("🎥 Remote stream received!", remoteStream);
           if (remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = remoteStream;
+            setHasRemoteVideo(true);
           }
         },
         (candidate) => {
+          console.log("🧊 Sending ICE candidate:", candidate);
           sendSignal("call:ice-candidate", candidate.toJSON());
         }
       );
 
-      localStream
-        .getTracks()
-        .forEach((track) => pc.addTrack(track, localStream));
+      // Add connection state logging
+      pc.onconnectionstatechange = () => {
+        console.log("🔗 Connection state:", pc.connectionState);
+        setConnectionState(pc.connectionState);
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        console.log("🧊 ICE connection state:", pc.iceConnectionState);
+      };
+
+      localStream.getTracks().forEach((track) => {
+        console.log("➕ Adding local track:", track.kind);
+        pc.addTrack(track, localStream);
+      });
 
       pcRef.current = pc;
 
       if (isCaller) {
+        console.log("📞 Creating offer...");
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+        console.log("📤 Sending offer:", offer);
         await sendSignal("call:offer", offer);
       }
     }
@@ -197,45 +175,32 @@ export default function CallOverlay({
       console.log("🧹 Cleaning up call...");
       localStreamRef.current?.getTracks().forEach((track) => {
         track.stop();
-        console.log("🛑 Stopped track:", track.kind);
       });
       pcRef.current?.close();
-      console.log("✅ Cleanup complete");
     };
   }, [conversationId, isCaller]);
 
+  /* ---------------------------
+     Signaling
+  --------------------------- */
   useEffect(() => {
     const channelName = `private-conversation-${conversationId}`;
-
-    // Log Pusher connection state
-    console.log("🔌 Pusher connection state:", pusherClient.connection.state);
-
-    pusherClient.connection.bind("connected", () => {
-      console.log("✅ Pusher connected");
-    });
-
-    pusherClient.connection.bind("error", (err: any) => {
-      console.error("❌ Pusher connection error:", err);
-    });
-
     const channel = pusherClient.subscribe(channelName);
 
-    console.log("📡 Subscribing to channel:", channelName);
+    console.log("📡 Subscribing to:", channelName);
 
     channel.bind("pusher:subscription_succeeded", () => {
-      console.log("✅ Successfully subscribed to:", channelName);
+      console.log("✅ Subscribed to:", channelName);
     });
 
-    channel.bind("pusher:subscription_error", (err: any) => {
-      console.error("❌ Subscription error:", err);
-    });
+    channel.bind("call:offer", async (payload: any) => {
+      console.log("📥 Received offer payload:", payload);
 
-    channel.bind("call:offer", async (data: any) => {
-      console.log("📥 Received offer:", data);
       if (isCaller) {
-        console.log("⏭️ Skipping offer (I'm the caller)");
+        console.log("⏭️ Ignoring offer (I'm the caller)");
         return;
       }
+
       try {
         const pc = pcRef.current;
         if (!pc) {
@@ -243,58 +208,113 @@ export default function CallOverlay({
           return;
         }
 
-        const offer = data.data || data;
-        console.log("📝 Setting remote description (offer):", offer);
+        // Extract the actual offer from the payload
+        const offer = payload.data || payload;
+        console.log("📝 Processing offer:", offer);
+
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        console.log("✅ Remote description set");
+        console.log("✅ Remote description set (offer)");
+
+        // Process queued ICE candidates
+        console.log(
+          `📦 Processing ${iceCandidateQueueRef.current.length} queued candidates`
+        );
+        for (const candidate of iceCandidateQueueRef.current) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log("✅ Added queued ICE candidate");
+          } catch (err) {
+            console.error("❌ Failed to add queued candidate:", err);
+          }
+        }
+        iceCandidateQueueRef.current = [];
 
         const answer = await pc.createAnswer();
-        console.log("📝 Created answer:", answer);
-
         await pc.setLocalDescription(answer);
-        console.log("✅ Local description set");
-
+        console.log("📤 Sending answer:", answer);
         await sendSignal("call:answer", answer);
-        console.log("✅ Answer sent");
       } catch (error) {
         console.error("❌ Failed to handle offer:", error);
       }
     });
 
-    channel.bind("call:answer", async (data: any) => {
-      console.log("📥 Received answer:", data);
+    channel.bind("call:answer", async (payload: any) => {
+      console.log("📥 Received answer payload:", payload);
+
       if (!isCaller) {
-        console.log("⏭️ Skipping answer (I'm not the caller)");
+        console.log("⏭️ Ignoring answer (I'm not the caller)");
         return;
       }
+
       try {
-        const answer = data.data || data;
-        console.log("📝 Setting remote description (answer):", answer);
-        await pcRef.current?.setRemoteDescription(
-          new RTCSessionDescription(answer)
+        const pc = pcRef.current;
+        if (!pc) {
+          console.error("❌ No peer connection");
+          return;
+        }
+
+        // Extract the actual answer from the payload
+        const answer = payload.data || payload;
+        console.log("📝 Processing answer:", answer);
+
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log("✅ Remote description set (answer)");
+
+        // Process queued ICE candidates
+        console.log(
+          `📦 Processing ${iceCandidateQueueRef.current.length} queued candidates`
         );
-        console.log("✅ Answer processed");
+        for (const candidate of iceCandidateQueueRef.current) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log("✅ Added queued ICE candidate");
+          } catch (err) {
+            console.error("❌ Failed to add queued candidate:", err);
+          }
+        }
+        iceCandidateQueueRef.current = [];
       } catch (error) {
         console.error("❌ Failed to handle answer:", error);
       }
     });
 
-    channel.bind("call:ice-candidate", async (data: any) => {
-      console.log("📥 Received ICE candidate:", data);
-      try {
-        const candidate = data.data || data;
+    channel.bind("call:ice-candidate", async (payload: any) => {
+      console.log("📥 Received ICE candidate payload:", payload);
 
-        if (!candidate || !candidate.candidate) {
-          console.log("⏭️ Skipping empty/null candidate");
+      try {
+        const pc = pcRef.current;
+        if (!pc) {
+          console.error("❌ No peer connection");
           return;
         }
 
-        console.log("📝 Adding ICE candidate:", candidate);
-        await pcRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
+        // Extract the actual candidate from the payload
+        const candidate = payload.data || payload;
+
+        if (!candidate || !candidate.candidate) {
+          console.log("⏭️ Skipping empty candidate");
+          return;
+        }
+
+        console.log("🧊 Processing ICE candidate:", candidate);
+
+        // Queue if remote description not set
+        if (!pc.remoteDescription) {
+          console.log("⏸️ Queuing candidate (no remote description yet)");
+          iceCandidateQueueRef.current.push(candidate);
+          return;
+        }
+
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
         console.log("✅ ICE candidate added");
       } catch (error) {
         console.error("❌ Failed to add ICE candidate:", error);
       }
+    });
+
+    channel.bind("call:ended", () => {
+      console.log("📴 Call ended by remote user");
+      handleEndCall();
     });
 
     return () => {
@@ -304,10 +324,29 @@ export default function CallOverlay({
   }, [conversationId, isCaller]);
 
   /* ---------------------------
+     End Call Handler
+  --------------------------- */
+  const handleEndCall = () => {
+    console.log("🛑 Ending call...");
+
+    localStreamRef.current?.getTracks().forEach((track) => {
+      track.stop();
+    });
+
+    pcRef.current?.close();
+
+    sendSignal("call:ended", {});
+
+    if (onEndCall) {
+      onEndCall();
+    } else {
+      window.location.reload();
+    }
+  };
+
+  /* ---------------------------
      UI
   --------------------------- */
-
-  // Show permission request screen
   if (permissionState === "pending" || permissionState === "denied") {
     return (
       <div className="fixed inset-0 z-[999] bg-black flex items-center justify-center">
@@ -343,94 +382,70 @@ export default function CallOverlay({
   }
 
   return (
-    <div className="fixed inset-0 z-[999] bg-black flex ">
-      {/* Remote Video or Audio-only placeholder */}
-      {hasRemoteVideo ? (
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="flex-1 object-cover"
-        />
-      ) : (
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-          <div className="text-center space-y-4">
-            <div className="w-32 h-32 mx-auto rounded-full bg-gray-700 flex items-center justify-center">
-              <svg
-                className="w-16 h-16 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                />
-              </svg>
-            </div>
-            <p className="text-white text-lg">Audio Only</p>
-            <p className="text-gray-400 text-sm">Camera is disabled</p>
-          </div>
-          {/* Hidden audio element for audio-only calls */}
-          <audio ref={remoteVideoRef} autoPlay playsInline className="hidden" />
-        </div>
-      )}
+    <div className="fixed inset-0 z-[999] bg-black flex flex-col">
+      {/* Connection Status Indicator */}
+      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/60 text-white text-xs">
+        {connectionState === "connected" ? (
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            Connected
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+            {connectionState === "connecting"
+              ? "Connecting..."
+              : connectionState}
+          </span>
+        )}
+      </div>
 
-      {/* Local Video or Audio-only indicator */}
-      {hasLocalVideo ? (
-        <video
-          ref={localVideoRef}
-          autoPlay
-          muted
-          playsInline
-          className="absolute bottom-6 right-6 w-40 h-28 rounded-xl border border-white/20 object-cover scale-x-[-1]"
-        />
-      ) : (
-        <div className="absolute bottom-6 right-6 w-40 h-28 rounded-xl border border-white/20 bg-gray-800 flex items-center justify-center">
-          <svg
-            className="w-8 h-8 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-            />
-          </svg>
-          <audio
-            ref={localVideoRef}
+      {/* Remote Video */}
+      <div className="flex-1 relative">
+        {hasRemoteVideo ? (
+          <video
+            ref={remoteVideoRef}
             autoPlay
-            muted
             playsInline
-            className="hidden"
+            className="w-full h-full object-cover"
           />
-        </div>
-      )}
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+            <div className="text-center space-y-4">
+              <div className="w-32 h-32 mx-auto rounded-full bg-gray-700 flex items-center justify-center">
+                <svg
+                  className="w-16 h-16 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+              <p className="text-white text-lg">Waiting for video...</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Local Video */}
+      <video
+        ref={localVideoRef}
+        autoPlay
+        muted
+        playsInline
+        className="absolute bottom-6 right-6 w-48 h-36 rounded-xl border-2 border-white/20 object-cover scale-x-[-1] shadow-2xl"
+      />
 
       {/* End Call Button */}
       <button
-        onClick={() => {
-          // Stop all tracks
-          localStreamRef.current?.getTracks().forEach((track) => {
-            track.stop();
-            console.log("🛑 Stopped track:", track.kind);
-          });
-
-          // Close peer connection
-          pcRef.current?.close();
-
-          // Send end call signal
-          sendSignal("call:ended", {});
-
-          // Close the overlay (you'll need to pass this from parent)
-          window.location.reload(); // Temporary solution
-        }}
-        className="absolute top-6 right-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
+        onClick={handleEndCall}
+        className="absolute top-6 right-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors shadow-lg"
       >
         End Call
       </button>
