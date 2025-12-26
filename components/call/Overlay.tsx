@@ -21,6 +21,8 @@ export default function CallOverlay({
     "pending" | "granted" | "denied"
   >("pending");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+  const [hasLocalVideo, setHasLocalVideo] = useState(true);
 
   /* ---------------------------
      Helper to send signaling via API
@@ -203,14 +205,30 @@ export default function CallOverlay({
   }, [conversationId, isCaller]);
 
   useEffect(() => {
-    const channel = pusherClient.subscribe(
-      `private-conversation-${conversationId}`
-    );
+    const channelName = `private-conversation-${conversationId}`;
 
-    console.log(
-      "📡 Subscribed to channel:",
-      `private-conversation-${conversationId}`
-    );
+    // Log Pusher connection state
+    console.log("🔌 Pusher connection state:", pusherClient.connection.state);
+
+    pusherClient.connection.bind("connected", () => {
+      console.log("✅ Pusher connected");
+    });
+
+    pusherClient.connection.bind("error", (err: any) => {
+      console.error("❌ Pusher connection error:", err);
+    });
+
+    const channel = pusherClient.subscribe(channelName);
+
+    console.log("📡 Subscribing to channel:", channelName);
+
+    channel.bind("pusher:subscription_succeeded", () => {
+      console.log("✅ Successfully subscribed to:", channelName);
+    });
+
+    channel.bind("pusher:subscription_error", (err: any) => {
+      console.error("❌ Subscription error:", err);
+    });
 
     channel.bind("call:offer", async (data: any) => {
       console.log("📥 Received offer:", data);
@@ -226,9 +244,16 @@ export default function CallOverlay({
         }
 
         const offer = data.data || data;
+        console.log("📝 Setting remote description (offer):", offer);
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log("✅ Remote description set");
+
         const answer = await pc.createAnswer();
+        console.log("📝 Created answer:", answer);
+
         await pc.setLocalDescription(answer);
+        console.log("✅ Local description set");
+
         await sendSignal("call:answer", answer);
         console.log("✅ Answer sent");
       } catch (error) {
@@ -244,6 +269,7 @@ export default function CallOverlay({
       }
       try {
         const answer = data.data || data;
+        console.log("📝 Setting remote description (answer):", answer);
         await pcRef.current?.setRemoteDescription(
           new RTCSessionDescription(answer)
         );
@@ -257,6 +283,13 @@ export default function CallOverlay({
       console.log("📥 Received ICE candidate:", data);
       try {
         const candidate = data.data || data;
+
+        if (!candidate || !candidate.candidate) {
+          console.log("⏭️ Skipping empty/null candidate");
+          return;
+        }
+
+        console.log("📝 Adding ICE candidate:", candidate);
         await pcRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
         console.log("✅ ICE candidate added");
       } catch (error) {
@@ -266,7 +299,7 @@ export default function CallOverlay({
 
     return () => {
       channel.unbind_all();
-      pusherClient.unsubscribe(`private-conversation-${conversationId}`);
+      pusherClient.unsubscribe(channelName);
     };
   }, [conversationId, isCaller]);
 
@@ -311,19 +344,73 @@ export default function CallOverlay({
 
   return (
     <div className="fixed inset-0 z-[999] bg-black flex ">
-      <video
-        ref={remoteVideoRef}
-        autoPlay
-        playsInline
-        className="flex-1 object-cover"
-      />
-      <video
-        ref={localVideoRef}
-        autoPlay
-        muted
-        playsInline
-        className="absolute bottom-6 right-6 w-40 h-28 rounded-xl border border-white/20 object-cover scale-x-[-1]"
-      />
+      {/* Remote Video or Audio-only placeholder */}
+      {hasRemoteVideo ? (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className="flex-1 object-cover"
+        />
+      ) : (
+        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+          <div className="text-center space-y-4">
+            <div className="w-32 h-32 mx-auto rounded-full bg-gray-700 flex items-center justify-center">
+              <svg
+                className="w-16 h-16 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                />
+              </svg>
+            </div>
+            <p className="text-white text-lg">Audio Only</p>
+            <p className="text-gray-400 text-sm">Camera is disabled</p>
+          </div>
+          {/* Hidden audio element for audio-only calls */}
+          <audio ref={remoteVideoRef} autoPlay playsInline className="hidden" />
+        </div>
+      )}
+
+      {/* Local Video or Audio-only indicator */}
+      {hasLocalVideo ? (
+        <video
+          ref={localVideoRef}
+          autoPlay
+          muted
+          playsInline
+          className="absolute bottom-6 right-6 w-40 h-28 rounded-xl border border-white/20 object-cover scale-x-[-1]"
+        />
+      ) : (
+        <div className="absolute bottom-6 right-6 w-40 h-28 rounded-xl border border-white/20 bg-gray-800 flex items-center justify-center">
+          <svg
+            className="w-8 h-8 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+            />
+          </svg>
+          <audio
+            ref={localVideoRef}
+            autoPlay
+            muted
+            playsInline
+            className="hidden"
+          />
+        </div>
+      )}
 
       {/* End Call Button */}
       <button

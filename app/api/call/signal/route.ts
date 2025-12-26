@@ -20,11 +20,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     console.log("📦 Request body:", body);
 
-    const { conversationId, type } = body;
+    const { conversationId, type, data } = body; // ← Added 'data' here
 
     console.log("🔍 Extracted values:", {
       conversationId,
       type,
+      hasData: !!data, // ← Log if data exists
       conversationIdType: typeof conversationId,
       typeType: typeof type,
     });
@@ -50,12 +51,13 @@ export async function POST(req: NextRequest) {
     console.log("📡 Triggering Pusher:", {
       channel: channelName,
       event: type,
-      data: { userId: session.user.id, timestamp: Date.now() },
+      hasData: !!data, // ← Log if data is present
     });
 
     await pusherServer.trigger(channelName, type, {
       userId: session.user.id,
-      username: session.user.username, // Include username for modal display
+      username: session.user.username,
+      data: data, // ← THIS IS THE CRITICAL FIX - Include the WebRTC data
       timestamp: Date.now(),
     });
 

@@ -7,15 +7,17 @@ import { useEffect } from "react";
 import CallButton from "./call-button";
 
 type ChatHeaderProps = {
-  conversationId: string,
+  conversationId: string;
   otherUser: {
     id: string;
     avatarUrl: string | null;
     username: string;
   } | null;
+  onCallStart: () => void; // ← Add this
 };
 
-export default function ChatHeader({ conversationId ,otherUser }: ChatHeaderProps) {
+
+export default function ChatHeader({ conversationId ,otherUser, onCallStart }: ChatHeaderProps) {
   const { onlineUsers } = usePresence();
 
   const isOnline = otherUser?.id ? onlineUsers.has(otherUser.id) : false;
@@ -64,7 +66,10 @@ export default function ChatHeader({ conversationId ,otherUser }: ChatHeaderProp
             size={20}
             className="cursor-pointer hover:text-white transition"
           />
-          <CallButton conversationId={conversationId } />
+          <CallButton
+            conversationId={conversationId}
+            onCallStart={onCallStart}
+          />
           <div className="w-px h-6 bg-white/20 mx-2" />
           <MoreVertical
             size={20}
