@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Smile, Paperclip, Send, X } from "lucide-react";
-import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
+import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
+import Image from "next/image";
 
 interface ChatInputProps {
   conversationId: string;
@@ -19,7 +20,6 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  /* -------------------- outside click for emoji -------------------- */
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
@@ -33,7 +33,6 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  /* -------------------- typing indicator -------------------- */
   function handleTyping() {
     fetch("/api/chat/typing", {
       method: "POST",
@@ -52,7 +51,6 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     }, 1500);
   }
 
-  /* -------------------- image select -------------------- */
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -67,7 +65,6 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  /* -------------------- send message -------------------- */
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (isSending) return;
@@ -76,13 +73,17 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     setIsSending(true);
 
     try {
-      let payload: any = {
+      let payload: {
+        conversationId: string;
+        type: string;
+        content?: string;
+        mediaUrl?: string;
+      } = {
         conversationId,
         type: "TEXT",
         content: text.trim(),
       };
 
-      // 📸 Upload image if exists
       if (imageFile) {
         const formData = new FormData();
         formData.append("file", imageFile);
@@ -114,7 +115,6 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
 
       if (!res.ok) throw new Error("Message send failed");
 
-      // reset state
       setText("");
       removeImage();
       setShowEmojiPicker(false);
@@ -126,18 +126,18 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     }
   }
 
-  /* -------------------- emoji -------------------- */
   const onEmojiClick = (emoji: EmojiClickData) => {
     setText((prev) => prev + emoji.emoji);
   };
 
   return (
     <div className="bg-[#0f1115] p-4">
-      {/* Image Preview */}
       {imagePreview && (
         <div className="mb-3 relative w-32">
-          <img
+          <Image
             src={imagePreview}
+            height={350}
+            width={350}
             className="rounded-xl object-cover"
             alt="preview"
           />
@@ -154,7 +154,6 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
         onSubmit={sendMessage}
         className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-2"
       >
-        {/* Image input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -185,7 +184,7 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
           />
           {showEmojiPicker && (
             <div className="absolute bottom-12 right-0 z-50">
-              <EmojiPicker theme="dark" onEmojiClick={onEmojiClick} />
+              <EmojiPicker theme={Theme.DARK} onEmojiClick={onEmojiClick} />
             </div>
           )}
         </div>
