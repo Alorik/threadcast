@@ -39,13 +39,13 @@ export default function LocalMediaPreview() {
 
 
     return (
-      <div className="relative w-full h-full bg-black rounded-xl overflow-hidden">
+      <div className="relative w-full h-full bg-black rounded-xl overflow-hidden ">
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover scale-x-[-1]"
         />
         <span className="absolute bottom-2 left-2 text-xs bg-black/60 text-white px-2 py-1 rounded">
           You

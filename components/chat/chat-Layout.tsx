@@ -10,6 +10,7 @@ import ChatSidebar from "./chat-sidebar";
 
 import { Message } from "@/types/chat";
 import IncomingCallListener from "../call/incoming-call";
+import LocalMediaPreview from "../call/LocalMediaPreview";
 
 interface ChatLayoutProps {
   conversationId: string;
@@ -96,9 +97,7 @@ export default function ChatLayout({
       {/* Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <ChatHeader
-          conversationId={conversationId}
-          otherUser={otherUser} />
+        <ChatHeader conversationId={conversationId} otherUser={otherUser} />
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto">
@@ -121,6 +120,7 @@ export default function ChatLayout({
           onReject={rejectCall}
         />
       )}
+  
     </div>
   );
 }
