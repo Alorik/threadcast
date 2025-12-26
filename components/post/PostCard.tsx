@@ -5,7 +5,37 @@ import LikeButton from "@/components/like-button";
 import CommentForm from "@/components/comments-form";
 import { MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 
-export default function PostCard({ post }: { post: any }) {
+interface Comment {
+  id: string;
+  content: string;
+  user?: {
+    username: string;
+  };
+}
+
+interface Media {
+  url: string;
+  type: string;
+}
+
+interface Post {
+  id: string;
+  content?: string;
+  createdAt: string;
+  media: Media[];
+  user?: {
+    username?: string;
+    avatarUrl?: string;
+  };
+  likes?: unknown[];
+  comments?: Comment[];
+  _count?: {
+    likes: number;
+    comments: number;
+  };
+}
+
+export default function PostCard({ post }: { post: Post }) {
   return (
     <article
       key={post.id}
@@ -55,7 +85,7 @@ export default function PostCard({ post }: { post: any }) {
           </p>
         )}
 
-        {post.media[0].url && (
+        {post.media[0]?.url && (
           <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-zinc-950 border border-white/5 shadow-lg group-hover:shadow-indigo-500/5 transition-all">
             <Image
               src={post.media[0].url}
@@ -70,9 +100,12 @@ export default function PostCard({ post }: { post: any }) {
         {/* Actions & Stats */}
         <div className="flex items-center gap-6 pt-2">
           <div className="flex items-center gap-2">
-            <LikeButton postId={post.id} liked={post.likes?.length > 0} />
+            <LikeButton
+              postId={post.id}
+              liked={(post.likes?.length ?? 0) > 0}
+            />
             <span className="text-xs text-slate-500 font-medium min-w-[1rem]">
-              {post._count?.likes > 0 && post._count?.likes}
+              {(post._count?.likes ?? 0) > 0 && post._count?.likes}
             </span>
           </div>
 
@@ -82,7 +115,7 @@ export default function PostCard({ post }: { post: any }) {
               className="group-hover/comment:scale-110 transition-transform"
             />
             <span className="text-xs font-medium">
-              {post._count?.comments > 0 ? post._count?.comments : ""}
+              {(post._count?.comments ?? 0) > 0 ? post._count?.comments : ""}
             </span>
           </button>
 
@@ -94,7 +127,7 @@ export default function PostCard({ post }: { post: any }) {
         {/* Comments Preview */}
         {post.comments && post.comments.length > 0 && (
           <div className="pt-4 border-t border-white/5 space-y-3">
-            {post.comments.slice(0, 2).map((c) => (
+            {post.comments.slice(0, 2).map((c: Comment) => (
               <div key={c.id} className="flex gap-2 text-sm group/comment">
                 <span className="font-bold text-slate-400 text-xs shrink-0 mt-0.5">
                   {c.user?.username}:
