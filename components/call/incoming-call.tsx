@@ -60,7 +60,7 @@ export default function IncomingCallListener({
                 }),
               });
             }}
-            className="px-4 py-2 rounded-xl bg-green-500 text-black"
+            className="px-4 py-2 rounded-xl bg-red-500 text-black"
           >Reject</button>
         </div>
       </div>

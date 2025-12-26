@@ -20,16 +20,6 @@ export default function ChatHeader({ conversationId ,otherUser }: ChatHeaderProp
 
   const isOnline = otherUser?.id ? onlineUsers.has(otherUser.id) : false;
 
-  // Debug logging
-  useEffect(() => {
-    console.log("=== ChatHeader Debug ===");
-    console.log("Other user ID:", otherUser?.id);
-    console.log("Online users Set:", onlineUsers);
-    console.log("Online users Array:", Array.from(onlineUsers));
-    console.log("Is online:", isOnline);
-    console.log("Has other user ID:", onlineUsers.has(otherUser?.id || ""));
-  }, [otherUser?.id, onlineUsers, isOnline]);
-
   return (
     <div className="h-20 border-b border-white/10 flex items-center bg-slate-950">
       <div className="flex items-center justify-between w-full px-4">

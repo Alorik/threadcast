@@ -96,7 +96,9 @@ export default function ChatLayout({
       {/* Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <ChatHeader conversationId={conversationId} otherUser={otherUser} />
+        <ChatHeader
+          conversationId={conversationId}
+          otherUser={otherUser} />
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto">
