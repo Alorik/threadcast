@@ -30,16 +30,8 @@ export default function CallOverlay({
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [connectionState, setConnectionState] = useState<string>("new");
 
-  /* ---------------------------
-     Helper to send signaling via API
-  --------------------------- */
   async function sendSignal(type: string, data: any) {
     try {
-      console.log(
-        "📤 Sending signal:",
-        type,
-        JSON.stringify(data).substring(0, 100)
-      );
       const response = await fetch("/api/call/signal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,18 +46,12 @@ export default function CallOverlay({
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log("✅ Signal sent successfully");
-      return result;
+      return await response.json();
     } catch (error) {
-      console.error("❌ Failed to send signal:", error);
       throw error;
     }
   }
 
-  /* ---------------------------
-     Request Media Permissions
-  --------------------------- */
   async function requestMediaPermissions() {
     try {
       setErrorMessage("");
@@ -90,15 +76,9 @@ export default function CallOverlay({
         audio: true,
       });
 
-      console.log("✅ Local stream obtained:", {
-        videoTracks: localStream.getVideoTracks().length,
-        audioTracks: localStream.getAudioTracks().length,
-      });
-
       setPermissionState("granted");
       return localStream;
     } catch (error: any) {
-      console.error("❌ Media permission error:", error);
       setPermissionState("denied");
 
       if (error instanceof DOMException) {
@@ -122,15 +102,10 @@ export default function CallOverlay({
     }
   }
 
-  /* ---------------------------
-     Setup media + peer
-  --------------------------- */
   useEffect(() => {
     let mounted = true;
 
     async function init() {
-      console.log("🎬 Initializing call...", { isCaller, conversationId });
-
       const localStream = await requestMediaPermissions();
       if (!localStream || !mounted) return;
 
@@ -138,17 +113,10 @@ export default function CallOverlay({
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream;
-        console.log("✅ Local video element set");
       }
 
       const pc = createPeerConnection(
         (remoteStream) => {
-          console.log("🎥 Remote stream callback triggered");
-          console.log("Remote stream tracks:", {
-            video: remoteStream.getVideoTracks().length,
-            audio: remoteStream.getAudioTracks().length,
-          });
-
           if (!mounted) return;
 
           remoteStreamRef.current = remoteStream;
@@ -156,38 +124,29 @@ export default function CallOverlay({
           if (remoteVideoRef.current && remoteStream) {
             remoteVideoRef.current.srcObject = remoteStream;
             setHasRemoteVideo(true);
-            console.log("✅ Remote video element set");
           }
         },
         (candidate) => {
-          console.log(
-            "🧊 Local ICE candidate:",
-            candidate.candidate.substring(0, 50)
-          );
           sendSignal("call:ice-candidate", candidate.toJSON());
         }
       );
 
       pc.onconnectionstatechange = () => {
-        console.log("🔗 Connection state changed:", pc.connectionState);
         if (mounted) {
           setConnectionState(pc.connectionState);
         }
       };
 
-      // Add all local tracks
       localStream.getTracks().forEach((track) => {
-        console.log("➕ Adding local track:", track.kind, track.enabled);
         pc.addTrack(track, localStream);
       });
 
       pcRef.current = pc;
+
       if (isCaller && pc.signalingState === "stable") {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await sendSignal("call:offer", offer);
-      } else {
-        console.log("📞 I'm the receiver - waiting for offer...");
       }
     }
 
@@ -195,10 +154,8 @@ export default function CallOverlay({
 
     return () => {
       mounted = false;
-      console.log("🧹 Cleaning up call...");
       localStreamRef.current?.getTracks().forEach((track) => {
         track.stop();
-        console.log("🛑 Stopped track:", track.kind);
       });
       pcRef.current?.close();
       hasProcessedOfferRef.current = false;
@@ -206,190 +163,100 @@ export default function CallOverlay({
     };
   }, [conversationId, isCaller]);
 
-  /* ---------------------------
-     Signaling via Pusher
-  --------------------------- */
   useEffect(() => {
     const channelName = `private-conversation-${conversationId}`;
-    console.log("📡 Subscribing to Pusher channel:", channelName);
-
     const channel = pusherClient.subscribe(channelName);
 
-    channel.bind("pusher:subscription_succeeded", () => {
-      console.log("✅ Pusher subscription successful");
-    });
-
-    channel.bind("pusher:subscription_error", (err: any) => {
-      console.error("❌ Pusher subscription error:", err);
-    });
-
-    // Handle OFFER (receiver only)
     channel.bind("call:offer", async (payload: any) => {
-      console.log("📥 [OFFER] Received:", payload);
-
-      if (isCaller) {
-        console.log("⏭️ Ignoring offer (I'm the caller)");
-        return;
-      }
-
-      if (hasProcessedOfferRef.current) {
-        console.log("⏭️ Already processed offer, ignoring duplicate");
-        return;
-      }
+      if (isCaller || hasProcessedOfferRef.current) return;
 
       try {
         const pc = pcRef.current;
-        if (!pc) {
-          console.error("❌ No peer connection available");
-          return;
-        }
+        if (!pc) return;
 
         hasProcessedOfferRef.current = true;
 
         const offer = payload.data || payload;
-        console.log("📝 Processing offer SDP:", offer.type);
-
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        console.log("✅ Remote description set (offer)");
 
-        // Process queued ICE candidates
         if (iceCandidateQueueRef.current.length > 0) {
-          console.log(
-            `📦 Processing ${iceCandidateQueueRef.current.length} queued ICE candidates`
-          );
           for (const candidate of iceCandidateQueueRef.current) {
             try {
               await pc.addIceCandidate(new RTCIceCandidate(candidate));
-              console.log("✅ Added queued ICE candidate");
-            } catch (err) {
-              console.error("❌ Failed to add queued candidate:", err);
-            }
+            } catch (err) {}
           }
           iceCandidateQueueRef.current = [];
         }
 
         const answer = await pc.createAnswer();
-        console.log("📝 Answer created:", answer.type);
-
         await pc.setLocalDescription(answer);
-        console.log("✅ Local description set (answer)");
-
         await sendSignal("call:answer", answer);
-        console.log("✅ Answer sent");
       } catch (error) {
-        console.error("❌ Failed to handle offer:", error);
         hasProcessedOfferRef.current = false;
       }
     });
 
-    // Handle ANSWER (caller only)
     channel.bind("call:answer", async (payload: any) => {
-      console.log("📥 [ANSWER] Received:", payload);
-
-      if (!isCaller) {
-        console.log("⏭️ Ignoring answer (I'm not the caller)");
-        return;
-      }
-
-      if (hasProcessedAnswerRef.current) {
-        console.log("⏭️ Already processed answer, ignoring duplicate");
-        return;
-      }
+      if (!isCaller || hasProcessedAnswerRef.current) return;
 
       try {
         const pc = pcRef.current;
-        if (!pc) {
-          console.error("❌ No peer connection available");
-          return;
-        }
+        if (!pc) return;
 
         hasProcessedAnswerRef.current = true;
 
         const answer = payload.data || payload;
-        console.log("📝 Processing answer SDP:", answer.type);
-
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        console.log("✅ Remote description set (answer)");
 
-        // Process queued ICE candidates
         if (iceCandidateQueueRef.current.length > 0) {
-          console.log(
-            `📦 Processing ${iceCandidateQueueRef.current.length} queued ICE candidates`
-          );
           for (const candidate of iceCandidateQueueRef.current) {
             try {
               await pc.addIceCandidate(new RTCIceCandidate(candidate));
-              console.log("✅ Added queued ICE candidate");
-            } catch (err) {
-              console.error("❌ Failed to add queued candidate:", err);
-            }
+            } catch (err) {}
           }
           iceCandidateQueueRef.current = [];
         }
       } catch (error) {
-        console.error("❌ Failed to handle answer:", error);
         hasProcessedAnswerRef.current = false;
       }
     });
 
-    // Handle ICE CANDIDATES (both)
     channel.bind("call:ice-candidate", async (payload: any) => {
-      console.log("📥 [ICE] Received candidate");
-
       try {
         const pc = pcRef.current;
-        if (!pc) {
-          console.error("❌ No peer connection available");
-          return;
-        }
+        if (!pc) return;
 
         const candidate = payload.data || payload;
 
-        if (!candidate || !candidate.candidate) {
-          console.log("⏭️ Skipping empty candidate");
-          return;
-        }
+        if (!candidate || !candidate.candidate) return;
 
-        // Queue if remote description not set yet
         if (!pc.remoteDescription) {
-          console.log("⏸️ Queueing ICE candidate (no remote description yet)");
           iceCandidateQueueRef.current.push(candidate);
           return;
         }
 
-        console.log("🧊 Adding ICE candidate immediately");
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        console.log("✅ ICE candidate added successfully");
-      } catch (error) {
-        console.error("❌ Failed to add ICE candidate:", error);
-      }
+      } catch (error) {}
     });
 
     channel.bind("call:ended", () => {
-      console.log("📴 Call ended by remote peer");
       handleEndCall();
     });
 
     return () => {
-      console.log("🧹 Unsubscribing from Pusher");
       channel.unbind_all();
       pusherClient.unsubscribe(channelName);
     };
   }, [conversationId, isCaller]);
 
-  /* ---------------------------
-     End Call Handler
-  --------------------------- */
   const handleEndCall = () => {
-    console.log("🛑 Ending call...");
-
     localStreamRef.current?.getTracks().forEach((track) => {
       track.stop();
     });
 
     pcRef.current?.close();
 
-    sendSignal("call:ended", {}).catch(console.error);
+    sendSignal("call:ended", {}).catch(() => {});
 
     if (onEndCall) {
       onEndCall();
@@ -398,9 +265,6 @@ export default function CallOverlay({
     }
   };
 
-  /* ---------------------------
-     UI
-  --------------------------- */
   if (permissionState === "pending" || permissionState === "denied") {
     return (
       <div className="fixed inset-0 z-[999] bg-black flex items-center justify-center">
@@ -437,7 +301,6 @@ export default function CallOverlay({
 
   return (
     <div className="fixed inset-0 z-[999] bg-black flex flex-col">
-      {/* Connection Status */}
       <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/60 text-white text-xs z-10">
         {connectionState === "connected" ? (
           <span className="flex items-center gap-2">
@@ -457,7 +320,6 @@ export default function CallOverlay({
         )}
       </div>
 
-      {/* Remote Video */}
       <div className="flex-1 relative bg-gradient-to-br from-gray-800 to-gray-900">
         <video
           ref={remoteVideoRef}
@@ -493,7 +355,6 @@ export default function CallOverlay({
         )}
       </div>
 
-      {/* Local Video */}
       <video
         ref={localVideoRef}
         autoPlay
@@ -502,7 +363,6 @@ export default function CallOverlay({
         className="absolute bottom-6 right-6 w-48 h-36 rounded-xl border-2 border-white/20 object-cover scale-x-[-1] shadow-2xl"
       />
 
-      {/* End Call Button */}
       <button
         onClick={handleEndCall}
         className="absolute top-6 right-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors shadow-lg z-10"
