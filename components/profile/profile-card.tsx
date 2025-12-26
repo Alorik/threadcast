@@ -4,8 +4,6 @@ import {
   Settings,
   Edit3,
   MapPin,
-  Link as LinkIcon,
-  Calendar,
 } from "lucide-react";
 import FollowButton from "./follow-button";
 import { useState } from "react";
@@ -67,7 +65,7 @@ export default function ProfileCard({
   followerCount,
   followingCount,
   isFollowing = false,
-  onFollowToggle,
+
 }: ProfileCardProps) {
   const displayAvatarUrl = getAvatarSrc(
     avatarUrl || user.avatarUrl,
@@ -181,9 +179,9 @@ export default function ProfileCard({
       </div>
       {editing && (
         <EditProfileModel
-          initialName={user.name}
-          initialBio={user.bio}
-          initialLocation={user.location}
+          initialName={user.name ?? ""}
+          initialBio={user.bio ?? ""}
+          initialLocation={user.location ?? ""}
           onClose={() => setEditing(false)}
         />
       )}
