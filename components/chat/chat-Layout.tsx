@@ -121,7 +121,7 @@ export default function ChatLayout({
           onReject={rejectCall}
         />
       )}
-      <CallOverlay conversationId={conversationId} isCaller={true} />
+
     </div>
   );
 }
