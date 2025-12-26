@@ -25,19 +25,22 @@ export default function CallOverlay({
   /* ---------------------------
      Helper to send signaling via API
   --------------------------- */
-  async function sendSignal(event: string, data: any) {
+  async function sendSignal(type: string, data: any) {
     try {
-      await fetch("/api/call/signal", {
+      console.log("📤 Sending signal:", type, data);
+      const response = await fetch("/api/call/signal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversationId,
-          event,
+          type,
           data,
         }),
       });
+      const result = await response.json();
+      console.log("✅ Signal sent:", result);
     } catch (error) {
-      console.error("Failed to send signal:", error);
+      console.error("❌ Failed to send signal:", error);
     }
   }
 
@@ -47,11 +50,29 @@ export default function CallOverlay({
   async function requestMediaPermissions() {
     try {
       setErrorMessage("");
-      
+
+      // Check if running in secure context
+      if (!window.isSecureContext) {
+        setErrorMessage(
+          "Camera/Microphone access requires a secure connection (HTTPS).\n\n" +
+            "You're currently using HTTP. Please:\n" +
+            "1. Use HTTPS, OR\n" +
+            "2. Access via localhost for development\n\n" +
+            `Current URL: ${window.location.href}`
+        );
+        setPermissionState("denied");
+        return null;
+      }
+
       // Check if mediaDevices is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setErrorMessage(
-          "Your browser doesn't support camera/microphone access. Please use Chrome, Edge, or Firefox."
+          "Your browser doesn't support camera/microphone access.\n\n" +
+            "Please use:\n" +
+            "• Chrome (version 53+)\n" +
+            "• Edge (version 79+)\n" +
+            "• Firefox (version 36+)\n" +
+            "• Safari (version 11+)"
         );
         setPermissionState("denied");
         return null;
@@ -66,6 +87,23 @@ export default function CallOverlay({
       return localStream;
     } catch (error) {
       console.error("Failed to get media permissions:", error);
+
+      // If video fails, try audio only
+      if (error instanceof DOMException && error.name === "NotReadableError") {
+        try {
+          console.log("⚠️ Camera busy, trying audio only...");
+          const audioStream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: true,
+          });
+          setPermissionState("granted");
+          setErrorMessage("Camera is in use. Audio-only mode enabled.");
+          return audioStream;
+        } catch (audioError) {
+          console.error("Audio-only also failed:", audioError);
+        }
+      }
+
       setPermissionState("denied");
 
       // Provide specific error messages
@@ -74,10 +112,10 @@ export default function CallOverlay({
           case "NotAllowedError":
             setErrorMessage(
               "Camera/Microphone access denied. Please:\n\n" +
-              "1. Click the camera icon in your browser's address bar\n" +
-              "2. Allow camera and microphone access\n" +
-              "3. On Windows 11: Go to Settings > Privacy & Security > Camera/Microphone and enable access\n" +
-              "4. Reload this page"
+                "1. Click the camera icon in your browser's address bar\n" +
+                "2. Allow camera and microphone access\n" +
+                "3. On Windows 11: Go to Settings > Privacy & Security > Camera/Microphone and enable access\n" +
+                "4. Reload this page"
             );
             break;
           case "NotFoundError":
@@ -97,7 +135,9 @@ export default function CallOverlay({
             break;
           default:
             setErrorMessage(
-              `Error accessing media devices: ${error.message || "Unknown error"}`
+              `Error accessing media devices: ${
+                error.message || "Unknown error"
+              }`
             );
         }
       } else {
@@ -114,7 +154,7 @@ export default function CallOverlay({
   useEffect(() => {
     async function init() {
       const localStream = await requestMediaPermissions();
-      
+
       if (!localStream) {
         return;
       }
@@ -152,8 +192,13 @@ export default function CallOverlay({
     init();
 
     return () => {
-      localStreamRef.current?.getTracks().forEach((track) => track.stop());
+      console.log("🧹 Cleaning up call...");
+      localStreamRef.current?.getTracks().forEach((track) => {
+        track.stop();
+        console.log("🛑 Stopped track:", track.kind);
+      });
       pcRef.current?.close();
+      console.log("✅ Cleanup complete");
     };
   }, [conversationId, isCaller]);
 
@@ -162,42 +207,62 @@ export default function CallOverlay({
       `private-conversation-${conversationId}`
     );
 
-    channel.bind("call:offer", async (offer: RTCSessionDescriptionInit) => {
-      if (isCaller) return;
+    console.log(
+      "📡 Subscribed to channel:",
+      `private-conversation-${conversationId}`
+    );
+
+    channel.bind("call:offer", async (data: any) => {
+      console.log("📥 Received offer:", data);
+      if (isCaller) {
+        console.log("⏭️ Skipping offer (I'm the caller)");
+        return;
+      }
       try {
         const pc = pcRef.current;
-        if (!pc) return;
+        if (!pc) {
+          console.error("❌ No peer connection");
+          return;
+        }
 
+        const offer = data.data || data;
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         await sendSignal("call:answer", answer);
+        console.log("✅ Answer sent");
       } catch (error) {
-        console.error("Failed to handle offer:", error);
+        console.error("❌ Failed to handle offer:", error);
       }
     });
 
-    channel.bind("call:answer", async (answer: RTCSessionDescriptionInit) => {
-      if (!isCaller) return;
+    channel.bind("call:answer", async (data: any) => {
+      console.log("📥 Received answer:", data);
+      if (!isCaller) {
+        console.log("⏭️ Skipping answer (I'm not the caller)");
+        return;
+      }
       try {
+        const answer = data.data || data;
         await pcRef.current?.setRemoteDescription(
           new RTCSessionDescription(answer)
         );
+        console.log("✅ Answer processed");
       } catch (error) {
-        console.error("Failed to handle answer:", error);
+        console.error("❌ Failed to handle answer:", error);
       }
     });
 
-    channel.bind(
-      "call:ice-candidate",
-      async (candidate: RTCIceCandidateInit) => {
-        try {
-          await pcRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (error) {
-          console.error("Failed to add ICE candidate:", error);
-        }
+    channel.bind("call:ice-candidate", async (data: any) => {
+      console.log("📥 Received ICE candidate:", data);
+      try {
+        const candidate = data.data || data;
+        await pcRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log("✅ ICE candidate added");
+      } catch (error) {
+        console.error("❌ Failed to add ICE candidate:", error);
       }
-    );
+    });
 
     return () => {
       channel.unbind_all();
@@ -208,7 +273,7 @@ export default function CallOverlay({
   /* ---------------------------
      UI
   --------------------------- */
-  
+
   // Show permission request screen
   if (permissionState === "pending" || permissionState === "denied") {
     return (
@@ -219,7 +284,7 @@ export default function CallOverlay({
               ? "Requesting Permissions..."
               : "Permission Denied"}
           </h2>
-          
+
           {errorMessage && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
               <p className="text-red-400 text-sm whitespace-pre-line">
@@ -259,6 +324,29 @@ export default function CallOverlay({
         playsInline
         className="absolute bottom-6 right-6 w-40 h-28 rounded-xl border border-white/20 object-cover scale-x-[-1]"
       />
+
+      {/* End Call Button */}
+      <button
+        onClick={() => {
+          // Stop all tracks
+          localStreamRef.current?.getTracks().forEach((track) => {
+            track.stop();
+            console.log("🛑 Stopped track:", track.kind);
+          });
+
+          // Close peer connection
+          pcRef.current?.close();
+
+          // Send end call signal
+          sendSignal("call:ended", {});
+
+          // Close the overlay (you'll need to pass this from parent)
+          window.location.reload(); // Temporary solution
+        }}
+        className="absolute top-6 right-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
+      >
+        End Call
+      </button>
     </div>
   );
 }
