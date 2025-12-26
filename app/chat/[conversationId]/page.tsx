@@ -1,5 +1,4 @@
 // app/chat/[conversationId]/page.tsx
-
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth/config";
@@ -14,9 +13,9 @@ export default async function ChatPage({
   if (!session) {
     return <div>Please login</div>;
   }
+
   const { conversationId } = await params;
 
-  // 1️⃣ Fetch conversation + members
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     include: {
@@ -37,6 +36,7 @@ export default async function ChatPage({
   if (!conversation) {
     return <div>Conversation not found</div>;
   }
+
   const isMember = conversation.members.some(
     (m) => m.userId === session.user.id
   );
@@ -45,7 +45,6 @@ export default async function ChatPage({
     return <div>Unauthorized</div>;
   }
 
-  // 2️⃣ Find other user
   const otherUser = conversation.members.find(
     (m) => m.userId !== session.user.id
   )?.user;
@@ -54,7 +53,6 @@ export default async function ChatPage({
     return <div>User not found</div>;
   }
 
-  // 3️⃣ Fetch messages
   const messagesFromDb = await prisma.message.findMany({
     where: { conversationId },
     include: {
@@ -69,13 +67,13 @@ export default async function ChatPage({
     orderBy: { createdAt: "asc" },
   });
 
-  // 🔥 FIX: Include ALL fields needed for images
   const messages = messagesFromDb.map((msg) => ({
     id: msg.id,
-    content: msg.content,
-    type: msg.type, // ← ADD THIS
-    mediaUrl: msg.mediaUrl, // ← ADD THIS
-    readAt: msg.readAt ? msg.readAt.toISOString() : null, // ← ADD THIS
+    conversationId: msg.conversationId,
+    content: msg.content || "",
+    type: msg.type,
+    mediaUrl: msg.mediaUrl,
+    readAt: msg.readAt ? msg.readAt.toISOString() : null,
     createdAt: msg.createdAt.toISOString(),
     sender: msg.sender,
   }));
