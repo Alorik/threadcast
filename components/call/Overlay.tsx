@@ -30,7 +30,13 @@ export default function CallOverlay({
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [connectionState, setConnectionState] = useState<string>("new");
 
-  async function sendSignal(type: string, data: any) {
+  async function sendSignal(
+    type: string,
+    data:
+      | RTCSessionDescriptionInit
+      | RTCIceCandidateInit
+      | Record<string, never>
+  ): Promise<void> {
     try {
       const response = await fetch("/api/call/signal", {
         method: "POST",
@@ -46,13 +52,13 @@ export default function CallOverlay({
         throw new Error(`HTTP ${response.status}`);
       }
 
-      return await response.json();
+      await response.json();
     } catch (error) {
       throw error;
     }
   }
 
-  async function requestMediaPermissions() {
+  async function requestMediaPermissions(): Promise<MediaStream | null> {
     try {
       setErrorMessage("");
 
@@ -78,7 +84,7 @@ export default function CallOverlay({
 
       setPermissionState("granted");
       return localStream;
-    } catch (error: any) {
+    } catch (error) {
       setPermissionState("denied");
 
       if (error instanceof DOMException) {
@@ -95,7 +101,9 @@ export default function CallOverlay({
             setErrorMessage("Camera/microphone is in use by another app.");
             break;
           default:
-            setErrorMessage(`Error: ${error.message}`);
+            setErrorMessage(
+              `Error: ${error.message || "Unknown error occurred"}`
+            );
         }
       }
       return null;
@@ -105,7 +113,7 @@ export default function CallOverlay({
   useEffect(() => {
     let mounted = true;
 
-    async function init() {
+    async function init(): Promise<void> {
       const localStream = await requestMediaPermissions();
       if (!localStream || !mounted) return;
 
@@ -116,7 +124,7 @@ export default function CallOverlay({
       }
 
       const pc = createPeerConnection(
-        (remoteStream) => {
+        (remoteStream: MediaStream) => {
           if (!mounted) return;
 
           remoteStreamRef.current = remoteStream;
@@ -126,18 +134,18 @@ export default function CallOverlay({
             setHasRemoteVideo(true);
           }
         },
-        (candidate) => {
+        (candidate: RTCIceCandidate) => {
           sendSignal("call:ice-candidate", candidate.toJSON());
         }
       );
 
-      pc.onconnectionstatechange = () => {
+      pc.onconnectionstatechange = (): void => {
         if (mounted) {
           setConnectionState(pc.connectionState);
         }
       };
 
-      localStream.getTracks().forEach((track) => {
+      localStream.getTracks().forEach((track: MediaStreamTrack) => {
         pc.addTrack(track, localStream);
       });
 
@@ -152,9 +160,9 @@ export default function CallOverlay({
 
     init();
 
-    return () => {
+    return (): void => {
       mounted = false;
-      localStreamRef.current?.getTracks().forEach((track) => {
+      localStreamRef.current?.getTracks().forEach((track: MediaStreamTrack) => {
         track.stop();
       });
       pcRef.current?.close();
@@ -167,96 +175,126 @@ export default function CallOverlay({
     const channelName = `private-conversation-${conversationId}`;
     const channel = pusherClient.subscribe(channelName);
 
-    channel.bind("call:offer", async (payload: any) => {
-      if (isCaller || hasProcessedOfferRef.current) return;
+    channel.bind(
+      "call:offer",
+      async (
+        payload: {
+          data?: RTCSessionDescriptionInit;
+        } & RTCSessionDescriptionInit
+      ): Promise<void> => {
+        if (isCaller || hasProcessedOfferRef.current) return;
 
-      try {
-        const pc = pcRef.current;
-        if (!pc) return;
+        try {
+          const pc = pcRef.current;
+          if (!pc) return;
 
-        hasProcessedOfferRef.current = true;
+          hasProcessedOfferRef.current = true;
 
-        const offer = payload.data || payload;
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+          const offer = payload.data || payload;
+          await pc.setRemoteDescription(new RTCSessionDescription(offer));
 
-        if (iceCandidateQueueRef.current.length > 0) {
-          for (const candidate of iceCandidateQueueRef.current) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch (err) {}
+          if (iceCandidateQueueRef.current.length > 0) {
+            for (const candidate of iceCandidateQueueRef.current) {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (err) {
+                // Silent fail
+              }
+            }
+            iceCandidateQueueRef.current = [];
           }
-          iceCandidateQueueRef.current = [];
+
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await sendSignal("call:answer", answer);
+        } catch (error) {
+          hasProcessedOfferRef.current = false;
         }
-
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await sendSignal("call:answer", answer);
-      } catch (error) {
-        hasProcessedOfferRef.current = false;
       }
-    });
+    );
 
-    channel.bind("call:answer", async (payload: any) => {
-      if (!isCaller || hasProcessedAnswerRef.current) return;
+    channel.bind(
+      "call:answer",
+      async (
+        payload: {
+          data?: RTCSessionDescriptionInit;
+        } & RTCSessionDescriptionInit
+      ): Promise<void> => {
+        if (!isCaller || hasProcessedAnswerRef.current) return;
 
-      try {
-        const pc = pcRef.current;
-        if (!pc) return;
+        try {
+          const pc = pcRef.current;
+          if (!pc) return;
 
-        hasProcessedAnswerRef.current = true;
+          hasProcessedAnswerRef.current = true;
 
-        const answer = payload.data || payload;
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          const answer = payload.data || payload;
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
 
-        if (iceCandidateQueueRef.current.length > 0) {
-          for (const candidate of iceCandidateQueueRef.current) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch (err) {}
+          if (iceCandidateQueueRef.current.length > 0) {
+            for (const candidate of iceCandidateQueueRef.current) {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (err) {
+                // Silent fail
+              }
+            }
+            iceCandidateQueueRef.current = [];
           }
-          iceCandidateQueueRef.current = [];
+        } catch (error) {
+          hasProcessedAnswerRef.current = false;
         }
-      } catch (error) {
-        hasProcessedAnswerRef.current = false;
       }
-    });
+    );
 
-    channel.bind("call:ice-candidate", async (payload: any) => {
-      try {
-        const pc = pcRef.current;
-        if (!pc) return;
+    channel.bind(
+      "call:ice-candidate",
+      async (
+        payload: {
+          data?: RTCIceCandidateInit;
+          candidate?: string;
+        } & RTCIceCandidateInit
+      ): Promise<void> => {
+        try {
+          const pc = pcRef.current;
+          if (!pc) return;
 
-        const candidate = payload.data || payload;
+          const candidate = payload.data || payload;
 
-        if (!candidate || !candidate.candidate) return;
+          if (!candidate || !candidate.candidate) return;
 
-        if (!pc.remoteDescription) {
-          iceCandidateQueueRef.current.push(candidate);
-          return;
+          if (!pc.remoteDescription) {
+            iceCandidateQueueRef.current.push(candidate);
+            return;
+          }
+
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (error) {
+          // Silent fail
         }
+      }
+    );
 
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (error) {}
-    });
-
-    channel.bind("call:ended", () => {
+    channel.bind("call:ended", (): void => {
       handleEndCall();
     });
 
-    return () => {
+    return (): void => {
       channel.unbind_all();
       pusherClient.unsubscribe(channelName);
     };
   }, [conversationId, isCaller]);
 
-  const handleEndCall = () => {
-    localStreamRef.current?.getTracks().forEach((track) => {
+  const handleEndCall = (): void => {
+    localStreamRef.current?.getTracks().forEach((track: MediaStreamTrack) => {
       track.stop();
     });
 
     pcRef.current?.close();
 
-    sendSignal("call:ended", {}).catch(() => {});
+    sendSignal("call:ended", {}).catch(() => {
+      // Silent fail
+    });
 
     if (onEndCall) {
       onEndCall();
@@ -285,7 +323,7 @@ export default function CallOverlay({
 
           {permissionState === "denied" && (
             <button
-              onClick={() => {
+              onClick={(): void => {
                 setPermissionState("pending");
                 requestMediaPermissions();
               }}

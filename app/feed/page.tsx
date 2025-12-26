@@ -1,13 +1,14 @@
 import { authOptions } from "@/auth/config";
 import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import ResponsiveSidebar from "@/components/navbar";
 import FeedClient from "@/components/feed/FeedClient";
-import { NextResponse } from "next/server";
 
 export default async function FeedPage() {
   const session = await getServerSession(authOptions);
+
   if (!session) {
-    return NextResponse.json({ errpr: "Unauthorized" }, { status: 401 });
+    redirect("/login");
   }
 
   return (
@@ -18,11 +19,9 @@ export default async function FeedPage() {
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-900/10 rounded-full blur-[120px]" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
       </div>
-
       <div className="relative z-10">
         {/* Navigation Rail */}
         <ResponsiveSidebar />
-
         {/* Main Content */}
         <main className="md:pl-72 min-h-screen">
           <div className="max-w-2xl mx-auto py-8 px-4 md:px-8">
