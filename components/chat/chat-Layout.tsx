@@ -141,7 +141,6 @@ export default function ChatLayout({
             console.log("🎬 onCallStart called!");
             console.log("Setting isCaller=true, isInCall=true");
             setIsCaller(true);
-            setIsInCall(true);
             console.log("State set:", { isCaller: true, isInCall: true });
           }}
         />

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { useEffect, useRef, useState } from "react";
 import { pusherClient } from "@/lib/pusher-client";
 import { createPeerConnection } from "@/lib/webrtc";
@@ -182,24 +182,10 @@ export default function CallOverlay({
       });
 
       pcRef.current = pc;
-
-      if (isCaller) {
-        console.log("📞 I'm the caller - creating offer...");
-        try {
-          const offer = await pc.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true,
-          });
-
-          console.log("📝 Offer created:", offer.type);
-          await pc.setLocalDescription(offer);
-          console.log("✅ Local description set");
-
-          await sendSignal("call:offer", offer);
-          console.log("✅ Offer sent via API");
-        } catch (error) {
-          console.error("❌ Failed to create/send offer:", error);
-        }
+      if (isCaller && pc.signalingState === "stable") {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await sendSignal("call:offer", offer);
       } else {
         console.log("📞 I'm the receiver - waiting for offer...");
       }

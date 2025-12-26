@@ -1,82 +1,75 @@
 "use client";
 
-import Image from "next/image";
-import { MoreVertical, Phone, Video } from "lucide-react";
-import { usePresence } from "@/app/providers/presence-provider";
-import { useEffect } from "react";
-import CallButton from "./call-button";
+import { Video } from "lucide-react";
 
-type ChatHeaderProps = {
+interface ChatHeaderProps {
   conversationId: string;
   otherUser: {
     id: string;
-    avatarUrl: string | null;
     username: string;
+    avatarUrl: string | null;
   } | null;
-  onCallStart: () => void; // ← Add this
-};
+  onCallStart: () => void;
+}
 
+export default function ChatHeader({
+  conversationId,
+  otherUser,
+  onCallStart,
+}: ChatHeaderProps) {
+  const handleCallClick = async () => {
+    console.log("📞 Call button clicked");
+    
+    try {
+      // Send the call invitation
+      const response = await fetch("/api/call/signal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          type: "call:incoming",
+          data: {
+            fromUser: {
+              id: "current-user-id", // You need to pass this from props
+              username: "Your Name", // You need to pass this from props
+            },
+          },
+        }),
+      });
 
-export default function ChatHeader({ conversationId ,otherUser, onCallStart }: ChatHeaderProps) {
-  const { onlineUsers } = usePresence();
+      if (!response.ok) {
+        throw new Error("Failed to send call invitation");
+      }
 
-  const isOnline = otherUser?.id ? onlineUsers.has(otherUser.id) : false;
+      console.log("✅ Call invitation sent");
+      
+      // Start the call on our side
+      onCallStart();
+    } catch (error) {
+      console.error("❌ Failed to start call:", error);
+    }
+  };
 
   return (
-    <div className="h-20 border-b border-white/10 flex items-center bg-slate-950">
-      <div className="flex items-center justify-between w-full px-4">
-        {/* Left */}
-        <div className="flex gap-4 items-center">
-          <div className="relative">
-            <div className="w-12 h-12 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center">
-              {otherUser?.avatarUrl ? (
-                <Image
-                  src={otherUser.avatarUrl}
-                  alt={otherUser.username}
-                  width={48}
-                  height={48}
-                  className="object-cover"
-                />
-              ) : (
-                <span className="text-white font-semibold text-lg">
-                  {otherUser?.username?.[0]?.toUpperCase() || "?"}
-                </span>
-              )}
-            </div>
-
-            {/* Online dot */}
-            {isOnline && (
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-950 rounded-full" />
-            )}
-          </div>
-
-          <div className="flex flex-col">
-            <div className="text-white font-semibold">
-              {otherUser?.username || "Unknown"}
-            </div>
-            <div className="text-gray-400 text-sm">
-              {isOnline ? "online" : "offline"}
-            </div>
-          </div>
+    <div className="flex items-center justify-between p-4 border-b border-white/10">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+          {otherUser?.username?.[0]?.toUpperCase() || "?"}
         </div>
-
-        {/* Right */}
-        <div className="flex gap-4 items-center text-gray-400">
-          <Phone
-            size={20}
-            className="cursor-pointer hover:text-white transition"
-          />
-          <CallButton
-            conversationId={conversationId}
-            onCallStart={onCallStart}
-          />
-          <div className="w-px h-6 bg-white/20 mx-2" />
-          <MoreVertical
-            size={20}
-            className="cursor-pointer hover:text-white transition"
-          />
+        <div>
+          <h2 className="text-white font-semibold">
+            {otherUser?.username || "Unknown"}
+          </h2>
         </div>
       </div>
+
+      <button
+        onClick={handleCallClick}
+        className="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition-colors"
+        title="Start video call"
+      >
+        <Video className="w-5 h-5 text-white" />
+      </button>
     </div>
   );
 }
