@@ -6,69 +6,69 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    console.log("🔐 Session check:", {
+    console.log("🔐 API /call/signal - Session:", {
       hasSession: !!session,
       userId: session?.user?.id,
       username: session?.user?.username,
     });
 
     if (!session?.user?.id) {
+      console.error("❌ Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
-    console.log("📦 Request body:", body);
-
-    const { conversationId, type, data } = body; // ← Added 'data' here
-
-    console.log("🔍 Extracted values:", {
-      conversationId,
-      type,
-      hasData: !!data, // ← Log if data exists
-      conversationIdType: typeof conversationId,
-      typeType: typeof type,
+    console.log("📦 API Request body:", {
+      conversationId: body.conversationId,
+      type: body.type,
+      hasData: !!body.data,
     });
 
+    const { conversationId, type, data } = body;
+
     if (!conversationId || !type) {
-      console.log("❌ Validation failed:", {
+      console.error("❌ Missing required fields:", {
         hasConversationId: !!conversationId,
         hasType: !!type,
       });
       return NextResponse.json(
-        {
-          error: "Invalid payload",
-          details: {
-            conversationId: conversationId ? "present" : "missing",
-            type: type ? "present" : "missing",
-          },
-        },
+        { error: "Missing conversationId or type" },
         { status: 400 }
       );
     }
 
     const channelName = `private-conversation-${conversationId}`;
-    console.log("📡 Triggering Pusher:", {
+
+    // Prepare the payload
+    const payload = {
+      userId: session.user.id,
+      username: session.user.username || session.user.name || "Unknown",
+      timestamp: Date.now(),
+      ...(data && { data }), // Include data if present
+    };
+
+    console.log("📡 Triggering Pusher event:", {
       channel: channelName,
       event: type,
-      hasData: !!data, // ← Log if data is present
+      payload: JSON.stringify(payload).substring(0, 150) + "...",
     });
 
-    await pusherServer.trigger(channelName, type, {
-      userId: session.user.id,
-      username: session.user.username,
-      data: data, // ← THIS IS THE CRITICAL FIX - Include the WebRTC data
-      timestamp: Date.now(),
-    });
+    // Trigger the Pusher event
+    await pusherServer.trigger(channelName, type, payload);
 
-    console.log("✅ Pusher event sent successfully");
-    return NextResponse.json({ ok: true });
+    console.log("✅ Pusher event triggered successfully");
+
+    return NextResponse.json({
+      ok: true,
+      event: type,
+      channel: channelName,
+    });
   } catch (error) {
-    console.error("💥 API Error:", error);
+    console.error("💥 API Error in /call/signal:", error);
     return NextResponse.json(
       {
         error: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
