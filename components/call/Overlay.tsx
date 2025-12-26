@@ -1,4 +1,4 @@
-"use client";
+"use client"
 import { useEffect, useRef, useState } from "react";
 import { pusherClient } from "@/lib/pusher-client";
 import { createPeerConnection } from "@/lib/webrtc";
@@ -18,7 +18,10 @@ export default function CallOverlay({
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
+  const hasProcessedOfferRef = useRef(false);
+  const hasProcessedAnswerRef = useRef(false);
 
   const [permissionState, setPermissionState] = useState<
     "pending" | "granted" | "denied"
@@ -32,7 +35,11 @@ export default function CallOverlay({
   --------------------------- */
   async function sendSignal(type: string, data: any) {
     try {
-      console.log("📤 Sending signal:", type, data);
+      console.log(
+        "📤 Sending signal:",
+        type,
+        JSON.stringify(data).substring(0, 100)
+      );
       const response = await fetch("/api/call/signal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -42,10 +49,17 @@ export default function CallOverlay({
           data,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
       const result = await response.json();
-      console.log("✅ Signal sent:", result);
+      console.log("✅ Signal sent successfully");
+      return result;
     } catch (error) {
       console.error("❌ Failed to send signal:", error);
+      throw error;
     }
   }
 
@@ -58,55 +72,50 @@ export default function CallOverlay({
 
       if (!window.isSecureContext) {
         setErrorMessage(
-          "Camera/Microphone access requires a secure connection (HTTPS).\n\n" +
-            "You're currently using HTTP. Please:\n" +
-            "1. Use HTTPS, OR\n" +
-            "2. Access via localhost for development\n\n" +
-            `Current URL: ${window.location.href}`
+          "Camera/Microphone requires HTTPS or localhost.\n" +
+            `Current: ${window.location.href}`
         );
         setPermissionState("denied");
         return null;
       }
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setErrorMessage(
-          "Your browser doesn't support camera/microphone access.\n\n" +
-            "Please use Chrome, Edge, Firefox, or Safari."
-        );
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setErrorMessage("Browser doesn't support camera/microphone.");
         setPermissionState("denied");
         return null;
       }
 
       const localStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: { width: 1280, height: 720 },
         audio: true,
+      });
+
+      console.log("✅ Local stream obtained:", {
+        videoTracks: localStream.getVideoTracks().length,
+        audioTracks: localStream.getAudioTracks().length,
       });
 
       setPermissionState("granted");
       return localStream;
-    } catch (error) {
-      console.error("Failed to get media permissions:", error);
+    } catch (error: any) {
+      console.error("❌ Media permission error:", error);
       setPermissionState("denied");
 
       if (error instanceof DOMException) {
         switch (error.name) {
           case "NotAllowedError":
             setErrorMessage(
-              "Camera/Microphone access denied. Please allow permissions and try again."
+              "Permission denied. Please allow camera/microphone access."
             );
             break;
           case "NotFoundError":
-            setErrorMessage(
-              "No camera or microphone found. Please connect a device."
-            );
+            setErrorMessage("No camera or microphone found.");
             break;
           case "NotReadableError":
-            setErrorMessage(
-              "Camera/microphone is in use by another application."
-            );
+            setErrorMessage("Camera/microphone is in use by another app.");
             break;
           default:
-            setErrorMessage(`Error: ${error.message || "Unknown error"}`);
+            setErrorMessage(`Error: ${error.message}`);
         }
       }
       return null;
@@ -117,178 +126,237 @@ export default function CallOverlay({
      Setup media + peer
   --------------------------- */
   useEffect(() => {
+    let mounted = true;
+
     async function init() {
-      console.log("🎬 Initializing call...", { isCaller });
+      console.log("🎬 Initializing call...", { isCaller, conversationId });
 
       const localStream = await requestMediaPermissions();
-      if (!localStream) return;
+      if (!localStream || !mounted) return;
 
       localStreamRef.current = localStream;
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream;
+        console.log("✅ Local video element set");
       }
 
       const pc = createPeerConnection(
         (remoteStream) => {
-          console.log("🎥 Remote stream received!", remoteStream);
-          if (remoteVideoRef.current) {
+          console.log("🎥 Remote stream callback triggered");
+          console.log("Remote stream tracks:", {
+            video: remoteStream.getVideoTracks().length,
+            audio: remoteStream.getAudioTracks().length,
+          });
+
+          if (!mounted) return;
+
+          remoteStreamRef.current = remoteStream;
+
+          if (remoteVideoRef.current && remoteStream) {
             remoteVideoRef.current.srcObject = remoteStream;
             setHasRemoteVideo(true);
+            console.log("✅ Remote video element set");
           }
         },
         (candidate) => {
-          console.log("🧊 Sending ICE candidate:", candidate);
+          console.log(
+            "🧊 Local ICE candidate:",
+            candidate.candidate.substring(0, 50)
+          );
           sendSignal("call:ice-candidate", candidate.toJSON());
         }
       );
 
-      // Add connection state logging
       pc.onconnectionstatechange = () => {
-        console.log("🔗 Connection state:", pc.connectionState);
-        setConnectionState(pc.connectionState);
+        console.log("🔗 Connection state changed:", pc.connectionState);
+        if (mounted) {
+          setConnectionState(pc.connectionState);
+        }
       };
 
-      pc.oniceconnectionstatechange = () => {
-        console.log("🧊 ICE connection state:", pc.iceConnectionState);
-      };
-
+      // Add all local tracks
       localStream.getTracks().forEach((track) => {
-        console.log("➕ Adding local track:", track.kind);
+        console.log("➕ Adding local track:", track.kind, track.enabled);
         pc.addTrack(track, localStream);
       });
 
       pcRef.current = pc;
 
       if (isCaller) {
-        console.log("📞 Creating offer...");
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        console.log("📤 Sending offer:", offer);
-        await sendSignal("call:offer", offer);
+        console.log("📞 I'm the caller - creating offer...");
+        try {
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true,
+          });
+
+          console.log("📝 Offer created:", offer.type);
+          await pc.setLocalDescription(offer);
+          console.log("✅ Local description set");
+
+          await sendSignal("call:offer", offer);
+          console.log("✅ Offer sent via API");
+        } catch (error) {
+          console.error("❌ Failed to create/send offer:", error);
+        }
+      } else {
+        console.log("📞 I'm the receiver - waiting for offer...");
       }
     }
 
     init();
 
     return () => {
+      mounted = false;
       console.log("🧹 Cleaning up call...");
       localStreamRef.current?.getTracks().forEach((track) => {
         track.stop();
+        console.log("🛑 Stopped track:", track.kind);
       });
       pcRef.current?.close();
+      hasProcessedOfferRef.current = false;
+      hasProcessedAnswerRef.current = false;
     };
   }, [conversationId, isCaller]);
 
   /* ---------------------------
-     Signaling
+     Signaling via Pusher
   --------------------------- */
   useEffect(() => {
     const channelName = `private-conversation-${conversationId}`;
+    console.log("📡 Subscribing to Pusher channel:", channelName);
+
     const channel = pusherClient.subscribe(channelName);
 
-    console.log("📡 Subscribing to:", channelName);
-
     channel.bind("pusher:subscription_succeeded", () => {
-      console.log("✅ Subscribed to:", channelName);
+      console.log("✅ Pusher subscription successful");
     });
 
+    channel.bind("pusher:subscription_error", (err: any) => {
+      console.error("❌ Pusher subscription error:", err);
+    });
+
+    // Handle OFFER (receiver only)
     channel.bind("call:offer", async (payload: any) => {
-      console.log("📥 Received offer payload:", payload);
+      console.log("📥 [OFFER] Received:", payload);
 
       if (isCaller) {
         console.log("⏭️ Ignoring offer (I'm the caller)");
         return;
       }
 
-      try {
-        const pc = pcRef.current;
-        if (!pc) {
-          console.error("❌ No peer connection");
-          return;
-        }
-
-        // Extract the actual offer from the payload
-        const offer = payload.data || payload;
-        console.log("📝 Processing offer:", offer);
-
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        console.log("✅ Remote description set (offer)");
-
-        // Process queued ICE candidates
-        console.log(
-          `📦 Processing ${iceCandidateQueueRef.current.length} queued candidates`
-        );
-        for (const candidate of iceCandidateQueueRef.current) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            console.log("✅ Added queued ICE candidate");
-          } catch (err) {
-            console.error("❌ Failed to add queued candidate:", err);
-          }
-        }
-        iceCandidateQueueRef.current = [];
-
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        console.log("📤 Sending answer:", answer);
-        await sendSignal("call:answer", answer);
-      } catch (error) {
-        console.error("❌ Failed to handle offer:", error);
-      }
-    });
-
-    channel.bind("call:answer", async (payload: any) => {
-      console.log("📥 Received answer payload:", payload);
-
-      if (!isCaller) {
-        console.log("⏭️ Ignoring answer (I'm not the caller)");
+      if (hasProcessedOfferRef.current) {
+        console.log("⏭️ Already processed offer, ignoring duplicate");
         return;
       }
 
       try {
         const pc = pcRef.current;
         if (!pc) {
-          console.error("❌ No peer connection");
+          console.error("❌ No peer connection available");
           return;
         }
 
-        // Extract the actual answer from the payload
+        hasProcessedOfferRef.current = true;
+
+        const offer = payload.data || payload;
+        console.log("📝 Processing offer SDP:", offer.type);
+
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log("✅ Remote description set (offer)");
+
+        // Process queued ICE candidates
+        if (iceCandidateQueueRef.current.length > 0) {
+          console.log(
+            `📦 Processing ${iceCandidateQueueRef.current.length} queued ICE candidates`
+          );
+          for (const candidate of iceCandidateQueueRef.current) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              console.log("✅ Added queued ICE candidate");
+            } catch (err) {
+              console.error("❌ Failed to add queued candidate:", err);
+            }
+          }
+          iceCandidateQueueRef.current = [];
+        }
+
+        const answer = await pc.createAnswer();
+        console.log("📝 Answer created:", answer.type);
+
+        await pc.setLocalDescription(answer);
+        console.log("✅ Local description set (answer)");
+
+        await sendSignal("call:answer", answer);
+        console.log("✅ Answer sent");
+      } catch (error) {
+        console.error("❌ Failed to handle offer:", error);
+        hasProcessedOfferRef.current = false;
+      }
+    });
+
+    // Handle ANSWER (caller only)
+    channel.bind("call:answer", async (payload: any) => {
+      console.log("📥 [ANSWER] Received:", payload);
+
+      if (!isCaller) {
+        console.log("⏭️ Ignoring answer (I'm not the caller)");
+        return;
+      }
+
+      if (hasProcessedAnswerRef.current) {
+        console.log("⏭️ Already processed answer, ignoring duplicate");
+        return;
+      }
+
+      try {
+        const pc = pcRef.current;
+        if (!pc) {
+          console.error("❌ No peer connection available");
+          return;
+        }
+
+        hasProcessedAnswerRef.current = true;
+
         const answer = payload.data || payload;
-        console.log("📝 Processing answer:", answer);
+        console.log("📝 Processing answer SDP:", answer.type);
 
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
         console.log("✅ Remote description set (answer)");
 
         // Process queued ICE candidates
-        console.log(
-          `📦 Processing ${iceCandidateQueueRef.current.length} queued candidates`
-        );
-        for (const candidate of iceCandidateQueueRef.current) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            console.log("✅ Added queued ICE candidate");
-          } catch (err) {
-            console.error("❌ Failed to add queued candidate:", err);
+        if (iceCandidateQueueRef.current.length > 0) {
+          console.log(
+            `📦 Processing ${iceCandidateQueueRef.current.length} queued ICE candidates`
+          );
+          for (const candidate of iceCandidateQueueRef.current) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              console.log("✅ Added queued ICE candidate");
+            } catch (err) {
+              console.error("❌ Failed to add queued candidate:", err);
+            }
           }
+          iceCandidateQueueRef.current = [];
         }
-        iceCandidateQueueRef.current = [];
       } catch (error) {
         console.error("❌ Failed to handle answer:", error);
+        hasProcessedAnswerRef.current = false;
       }
     });
 
+    // Handle ICE CANDIDATES (both)
     channel.bind("call:ice-candidate", async (payload: any) => {
-      console.log("📥 Received ICE candidate payload:", payload);
+      console.log("📥 [ICE] Received candidate");
 
       try {
         const pc = pcRef.current;
         if (!pc) {
-          console.error("❌ No peer connection");
+          console.error("❌ No peer connection available");
           return;
         }
 
-        // Extract the actual candidate from the payload
         const candidate = payload.data || payload;
 
         if (!candidate || !candidate.candidate) {
@@ -296,28 +364,28 @@ export default function CallOverlay({
           return;
         }
 
-        console.log("🧊 Processing ICE candidate:", candidate);
-
-        // Queue if remote description not set
+        // Queue if remote description not set yet
         if (!pc.remoteDescription) {
-          console.log("⏸️ Queuing candidate (no remote description yet)");
+          console.log("⏸️ Queueing ICE candidate (no remote description yet)");
           iceCandidateQueueRef.current.push(candidate);
           return;
         }
 
+        console.log("🧊 Adding ICE candidate immediately");
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        console.log("✅ ICE candidate added");
+        console.log("✅ ICE candidate added successfully");
       } catch (error) {
         console.error("❌ Failed to add ICE candidate:", error);
       }
     });
 
     channel.bind("call:ended", () => {
-      console.log("📴 Call ended by remote user");
+      console.log("📴 Call ended by remote peer");
       handleEndCall();
     });
 
     return () => {
+      console.log("🧹 Unsubscribing from Pusher");
       channel.unbind_all();
       pusherClient.unsubscribe(channelName);
     };
@@ -335,7 +403,7 @@ export default function CallOverlay({
 
     pcRef.current?.close();
 
-    sendSignal("call:ended", {});
+    sendSignal("call:ended", {}).catch(console.error);
 
     if (onEndCall) {
       onEndCall();
@@ -383,34 +451,39 @@ export default function CallOverlay({
 
   return (
     <div className="fixed inset-0 z-[999] bg-black flex flex-col">
-      {/* Connection Status Indicator */}
-      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/60 text-white text-xs">
+      {/* Connection Status */}
+      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/60 text-white text-xs z-10">
         {connectionState === "connected" ? (
           <span className="flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
             Connected
           </span>
-        ) : (
+        ) : connectionState === "connecting" ? (
           <span className="flex items-center gap-2">
             <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-            {connectionState === "connecting"
-              ? "Connecting..."
-              : connectionState}
+            Connecting...
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-gray-500 rounded-full"></span>
+            {connectionState}
           </span>
         )}
       </div>
 
       {/* Remote Video */}
-      <div className="flex-1 relative">
-        {hasRemoteVideo ? (
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+      <div className="flex-1 relative bg-gradient-to-br from-gray-800 to-gray-900">
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className={`w-full h-full object-cover ${
+            hasRemoteVideo ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        {!hasRemoteVideo && (
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-4">
               <div className="w-32 h-32 mx-auto rounded-full bg-gray-700 flex items-center justify-center">
                 <svg
@@ -428,6 +501,7 @@ export default function CallOverlay({
                 </svg>
               </div>
               <p className="text-white text-lg">Waiting for video...</p>
+              <p className="text-gray-400 text-sm">{connectionState}</p>
             </div>
           </div>
         )}
@@ -445,7 +519,7 @@ export default function CallOverlay({
       {/* End Call Button */}
       <button
         onClick={handleEndCall}
-        className="absolute top-6 right-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors shadow-lg"
+        className="absolute top-6 right-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors shadow-lg z-10"
       >
         End Call
       </button>

@@ -1,4 +1,3 @@
-
 export function createPeerConnection(
   onTrack: (stream: MediaStream) => void,
   onIceCandidate: (candidate: RTCIceCandidate) => void
@@ -10,20 +9,20 @@ export function createPeerConnection(
     ],
   });
 
-
+  // Track all received streams
   const remoteStream = new MediaStream();
 
   pc.ontrack = (event) => {
     console.log("🎥 Track received:", event.track.kind, event.streams.length);
 
-
+    // Add track to remote stream
     event.track.onunmute = () => {
       console.log("🔊 Track unmuted:", event.track.kind);
     };
 
     remoteStream.addTrack(event.track);
 
-
+    // Call the callback with the stream
     onTrack(remoteStream);
   };
 
