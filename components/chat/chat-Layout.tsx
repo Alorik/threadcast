@@ -1,5 +1,7 @@
-// ========== ChatLayout.tsx ==========
 "use client";
+
+import { useEffect } from "react";
+import { pusherClient } from "@/lib/pusher-client";
 
 import ChatHeader from "./chat-header";
 import ChatMessage from "./chat-message";
@@ -24,6 +26,29 @@ export default function ChatLayout({
   otherUser,
   currentUserId,
 }: ChatLayoutProps) {
+  /* ===============================
+     📞 CALL SIGNAL LISTENERS
+  =============================== */
+  useEffect(() => {
+    const channel = pusherClient.subscribe(
+      `private-conversation-${conversationId}`
+    );
+
+    channel.bind("call:accepted", () => {
+      console.log("📞 Call accepted — starting WebRTC next");
+      // next step → open video UI
+    });
+
+    channel.bind("call:rejected", () => {
+      alert("❌ Call rejected");
+    });
+
+    return () => {
+      channel.unbind_all();
+      pusherClient.unsubscribe(`private-conversation-${conversationId}`);
+    };
+  }, [conversationId]);
+
   return (
     <div className="flex h-screen w-full bg-[#0f1115] overflow-hidden">
       {/* Sidebar */}
@@ -33,10 +58,10 @@ export default function ChatLayout({
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header - Fixed */}
+        {/* Header */}
         <ChatHeader otherUser={otherUser} />
 
-        {/* Messages - Scrollable */}
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto">
           <ChatMessage
             conversationId={conversationId}
@@ -45,7 +70,7 @@ export default function ChatLayout({
           />
         </div>
 
-        {/* Input - Fixed */}
+        {/* Input */}
         <ChatInput conversationId={conversationId} />
       </div>
     </div>
