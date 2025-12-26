@@ -11,6 +11,7 @@ import ChatSidebar from "./chat-sidebar";
 import { Message } from "@/types/chat";
 import IncomingCallListener from "../call/incoming-call";
 import LocalMediaPreview from "../call/LocalMediaPreview";
+import CallOverlay from "../call/Overlay";
 
 interface ChatLayoutProps {
   conversationId: string;
@@ -120,7 +121,7 @@ export default function ChatLayout({
           onReject={rejectCall}
         />
       )}
-  
+      <CallOverlay conversationId={conversationId} isCaller={true} />
     </div>
   );
 }
