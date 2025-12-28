@@ -1,29 +1,28 @@
 "use client";
-
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>("");
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleRegister(e?: React.FormEvent) {
+  async function handleRegister(e?: FormEvent<HTMLFormElement>): Promise<void> {
     if (e) e.preventDefault();
     setError(null);
     setSuccess(null);
+
     if (!email || !username || !password) {
-      setError("please filll the credentials");
+      setError("Please fill in all credentials");
       return;
     }
 
     setLoading(true);
-
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -38,18 +37,19 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
-      setSuccess("Account created — signing you in...");
 
+      setSuccess("Account created — signing you in...");
       setTimeout(() => {
         router.push("/auth/login");
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setError("Unknown error during registration.");
     } finally {
-      setLoading(false); // ← Always reset loading
+      setLoading(false);
     }
   }
+
   return (
     <div className="max-w-7xl flex items-center gap-4 p-4">
       <form
@@ -59,7 +59,6 @@ export default function RegisterPage() {
         <h1 className="text-xl">Register User</h1>
         {error && <div className="text-red-500 text-lg">{error}</div>}
         {success && <div className="text-green-600 text-lg">{success}</div>}
-
         <div>
           <label className="text-sm block mb-1">Email</label>
           <input
@@ -69,17 +68,15 @@ export default function RegisterPage() {
             className="w-full border px-2 py-1 rounded"
             required
           />
-
-          <label className="text-sm block mb-1">Username</label>
+          <label className="text-sm block mb-1 mt-3">Username</label>
           <input
             value={username}
-            type="username"
+            type="text"
             onChange={(e) => setUsername(e.target.value.trim())}
             className="w-full border px-2 py-1 rounded"
             required
           />
-
-          <label className="text-sm block mb-1">Password</label>
+          <label className="text-sm block mb-1 mt-3">Password</label>
           <input
             value={password}
             type="password"
@@ -88,7 +85,6 @@ export default function RegisterPage() {
             required
           />
         </div>
-
         <div className="flex gap-3 items-center">
           <button
             type="submit"
