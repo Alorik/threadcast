@@ -1,166 +1,78 @@
-🚀 ThreadCast — Phase 1 & 2
+# 🚀 ThreadCast
 
-Auth · Profiles · Posts · Likes
+ThreadCast is a modern full-stack social platform built with **scalable architecture, clean data modeling, and real-time communication** at its core.
 
-ThreadCast is a full-stack social platform built with modern web architecture principles, focusing on correct data modeling, clean APIs, and scalable UI patterns.
+The project prioritizes **backend correctness first**, followed by **server-driven UI patterns** and **real-time features**, making it production-ready and easy to extend.
 
-This document summarizes everything implemented so far.
+---
 
-⸻
+## 🧱 Tech Stack
 
-🧱 Tech Stack
-	•	Next.js (App Router)
-	•	React + TypeScript
-	•	NextAuth (Credentials + OAuth)
-	•	Prisma ORM
-	•	PostgreSQL
-	•	Zod (schema validation)
-	•	Tailwind CSS
+### Frontend
+- Next.js (App Router)
+- React + TypeScript
+- Tailwind CSS
+- Server Components & Client Components
+- Zod (schema validation)
 
-⸻
+### Backend
+- NextAuth (Credentials + OAuth)
+- Prisma ORM
+- PostgreSQL
+- JWT-based session strategy
 
-📦 Completed Features
+### Realtime
+- WebRTC (peer-to-peer audio/video)
+- WebSocket-based signaling
+- ICE candidate handling (STUN/TURN ready)
 
-⸻
+---
 
-✅ Phase 1 — Authentication & Profile System
+## 📸 Screenshots
 
-🔐 Authentication
-	•	Email + password registration
-	•	Credentials-based login
-	•	Google OAuth provider (optional)
-	•	Secure password hashing using bcrypt
-	•	JWT-based session strategy with NextAuth
+> Images are stored in `/public`
 
-👤 User Profile & Onboarding
-	•	First-time onboarding flow
-	•	Profile fetch & update APIs
+### Authentication
+![Login](public/feed2.png)
 
-Endpoints
-	•	GET /api/me — fetch current user profile
-	•	PATCH /api/me — update profile data
+### Feed
+![Feed](public/feed.png)
 
-Profile Fields
-	•	email
-	•	username
-	•	bio
-	•	avatarUrl
-	•	onboarded flag
+### Profile
+![Profile](public/profile.png)
 
-🔒 Protected Routes
-	•	Server-side session validation
-	•	Redirects for unauthenticated users
-	•	Onboarding enforced if profile incomplete
+### Realtime Call
+![WebRTC Call](public/screenshots/webrtc-call.png)
 
-🧪 Fully Tested (Postman)
-	•	Registration
-	•	Login (Credentials)
-	•	Session persistence
-	•	Profile fetch & update
+---
 
-⸻
+## 📦 Implemented Features
 
-🎨 Frontend Screens (Phase 1)
-	•	/auth/login — credentials login
-	•	/auth/register — user registration
-	•	/auth/error — NextAuth error handling
-	•	/onboarding — profile completion
+---
 
-⸻
+## ✅ Phase 1 — Authentication & Profiles
 
-✅ Phase 2 — Posts & Likes System (Complete)
+### Authentication
+- Email + password registration
+- Credentials-based login
+- Google OAuth (optional)
+- Secure password hashing using `bcrypt`
+- JWT-based sessions via NextAuth
 
-⸻
+### User Profiles & Onboarding
+- First-time onboarding flow
+- Profile fetch & update APIs
+- Avatar upload support
+- Onboarding enforcement for incomplete profiles
 
-📝 Posts System
+**Profile Fields**
+- `email`
+- `username`
+- `bio`
+- `avatarUrl`
+- `onboarded`
 
-📐 Prisma Model
-	•	User → Post (1-to-many)
-	•	Clean, extensible schema
-
-🔌 API Routes
-
-POST /api/posts
-	•	Creates a new post
-	•	Auth-protected
-	•	Zod-validated input
-
-GET /api/posts
-	•	Fetches feed (latest first)
-	•	Includes:
-	•	Author data
-	•	Like count
-	•	Whether the current user liked the post
-
-⸻
-
-🖥️ Feed UI (/feed)
-	•	Server Component rendered feed
-	•	Displays:
-	•	Username
-	•	Post content
-	•	Timestamp
-	•	Like count
-	•	Like toggle button
-
-✍️ Create Post Form
-	•	Client component
-	•	Calls POST /api/posts
-	•	Uses router.refresh() for instant feed updates
-	•	No client-side state hacks
-
-⸻
-
-❤️ Likes System
-
-📐 Prisma Model
-	•	Dedicated Like model
-	•	Unique constraint: (userId, postId)
-
-🔌 API Routes
-
-POST /api/posts/[postId]/like
-	•	Likes a post
-	•	Safely handles already-liked cases
-
-DELETE /api/posts/[postId]/like
-	•	Unlikes a post
-
-📂 Key Folder Structure
-
-
-app/
- ├─ api/
- │   ├─ auth/
- │   │   ├─ [...nextauth]/route.ts
- │   │   └─ register/route.ts
- │   ├─ me/route.ts
- │   ├─ posts/
- │   │   ├─ route.ts
- │   │   └─ [postId]/
- │   │       └─ like/route.ts
- │
- ├─ auth/
- │   ├─ login/page.tsx
- │   ├─ register/page.tsx
- │   └─ error/page.tsx
- │
- ├─ onboarding/page.tsx
- ├─ feed/page.tsx
-
-components/
- ├─ create-post-form.tsx
- └─ like-button.tsx
-
-prisma/
- └─ schema.prisma
-
-
-
-
-🏁 Current Status
-
-✔ Phase 1 — Auth, Sessions, Profiles, Onboarding
-✔ Phase 2 — Posts, Feed UI, Likes, Toggle Logic
-
-Architecture is stable, scalable, and production-ready.
+**API Endpoints**
+```http
+GET   /api/me      → Fetch current user
+PATCH /api/me      → Update profile
