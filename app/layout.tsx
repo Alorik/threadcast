@@ -30,7 +30,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <PresenceProvider>{children}</PresenceProvider>
+          {typeof window !== "undefined" ? (
+            <PresenceProvider>{children}</PresenceProvider>
+          ) : (
+            children
+          )}
         </Providers>
       </body>
     </html>
