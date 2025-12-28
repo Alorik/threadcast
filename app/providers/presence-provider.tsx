@@ -1,11 +1,24 @@
 "use client";
-
 import { createContext, useContext, useEffect, useState } from "react";
-import { pusherClient } from "@/lib/pusher-client";
+import Pusher, { PresenceChannel } from "pusher-js";
 
 type PresenceContextType = {
   onlineUsers: Set<string>;
 };
+
+// Pusher Members type
+interface PusherMembers {
+  count: number;
+  myID: string;
+  me: PusherMember;
+  members: Record<string, PusherMember>;
+  each(callback: (member: PusherMember) => void): void;
+}
+
+interface PusherMember {
+  id: string;
+  info?: any;
+}
 
 const PresenceContext = createContext<PresenceContextType | null>(null);
 
@@ -15,15 +28,42 @@ export default function PresenceProvider({
   children: React.ReactNode;
 }) {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [pusherClient, setPusherClient] = useState<Pusher | null>(null);
 
   useEffect(() => {
-    // Subscribe to presence channel
-    const channel = pusherClient.subscribe("presence-global");
+    // Initialize Pusher only on client side
+    const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+    if (!key || !cluster) {
+      console.error("Pusher configuration missing");
+      return;
+    }
+
+    const client = new Pusher(key, {
+      cluster: cluster,
+      authEndpoint: "/api/pusher/auth",
+    });
+
+    setPusherClient(client);
+
+    return () => {
+      client.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pusherClient) return;
+
+    // Subscribe to presence channel with proper typing
+    const channel = pusherClient.subscribe(
+      "presence-global"
+    ) as PresenceChannel;
 
     // When subscription succeeds, get all current members
-    channel.bind("pusher:subscription_succeeded", (members: any) => {
+    channel.bind("pusher:subscription_succeeded", (members: PusherMembers) => {
       const memberIds = new Set<string>();
-      members.each((member: any) => {
+      members.each((member: PusherMember) => {
         memberIds.add(member.id);
       });
       setOnlineUsers(memberIds);
@@ -31,13 +71,13 @@ export default function PresenceProvider({
     });
 
     // When a new member joins
-    channel.bind("pusher:member_added", (member: any) => {
+    channel.bind("pusher:member_added", (member: PusherMember) => {
       console.log("User came online:", member.id);
       setOnlineUsers((prev) => new Set(prev).add(member.id));
     });
 
     // When a member leaves
-    channel.bind("pusher:member_removed", (member: any) => {
+    channel.bind("pusher:member_removed", (member: PusherMember) => {
       console.log("User went offline:", member.id);
       setOnlineUsers((prev) => {
         const next = new Set(prev);
@@ -50,7 +90,7 @@ export default function PresenceProvider({
       channel.unbind_all();
       pusherClient.unsubscribe("presence-global");
     };
-  }, []);
+  }, [pusherClient]);
 
   return (
     <PresenceContext.Provider value={{ onlineUsers }}>
