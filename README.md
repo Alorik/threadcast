@@ -86,114 +86,117 @@ The project is designed to mirror real-world production systems by prioritizing 
 
 ---
 
-## 📦 Implemented Features by Phase
-
----
-
-## ✅ Phase 1 — Authentication & Profiles
-
-### 🔐 Authentication
-- Email + password registration
-- Credentials-based login
-- Google OAuth (optional)
-- Secure password hashing with bcrypt
-- JWT session strategy via NextAuth
-
-### 👤 User Profiles & Onboarding
-- First-time onboarding enforcement
-- Profile fetch & update APIs
-- Avatar upload support
-
-**Profile Fields**
-- `email`
-- `username`
-- `bio`
-- `avatarUrl`
-- `onboarded`
-
-### 🔌 API Endpoints
-```http
-GET   /api/me      → Fetch current user profile
-PATCH /api/me      → Update profile data
 
 
-Protected Routes
-	•	Server-side session validation
-	•	Redirects for unauthenticated users
-	•	Onboarding enforcement
+📂 Project Structure
 
-Tested (Postman)
-	•	Registration
-	•	Login
-	•	Session persistence
-	•	Profile updates
-
-
-
-	🎨 Frontend Routes (Phase 1)
-	•	/auth/login
-	•	/auth/register
-	•	/auth/error
-	•	/onboarding
-
-
-✅ Phase 2 — Posts & Likes
-
-Posts System
-	•	User → Post (1-to-many)
-	•	Clean, extensible Prisma schema
-API
-
-POST /api/posts   → Create post
-GET  /api/posts   → Fetch feed
-
-
-Feed response includes:
-	•	Author details
-	•	Like count
-	•	Whether the current user liked the post
-
-Feed UI (/feed)
-	•	Server Component rendered
-	•	Displays content, author, timestamp
-	•	Like toggle with optimistic UX
-	•	Uses router.refresh() (no client state hacks)
-
-Likes System
-	•	Dedicated Like model
-	•	Unique constraint: (userId, postId)
-
-
-API
-POST   /api/posts/[postId]/like
-DELETE /api/posts/[postId]/like
-	•	Idempotent
-	•	Safe handling of duplicate likes
-
-
-	✅ Phase 3 — Realtime (WebRTC)
-
-WebRTC Calling
-	•	1-to-1 audio/video calls
-	•	Peer-to-peer media streaming
-	•	WebSocket-based signaling
-	•	Offer / Answer exchange
-	•	ICE candidate queueing
-	•	Graceful disconnect handling
-
-Architecture Highlights
-	•	RTCPeerConnection
-	•	Media stream lifecycle management
-	•	Scalable signaling design
-
-### Architecture
-![Architecture Diagram](public/projectPath.png)
-
-🏁 Current Status
-	•	✔ Authentication & Sessions
-	•	✔ Profiles & Onboarding
-	•	✔ Posts, Feed & Likes
-	•	✔ WebRTC Realtime Calls
-	•	✔ Scalable, production-ready architecture.
-
-
+.
+├── app/
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── [...nextauth]/route.ts
+│   │   │   └── register/route.ts
+│   │   ├── call/signal/route.ts
+│   │   ├── chat/
+│   │   │   ├── conversation/route.ts
+│   │   │   ├── conversations/route.ts
+│   │   │   ├── messages/
+│   │   │   │   ├── [messageId]/route.ts
+│   │   │   │   └── route.ts
+│   │   │   ├── read/route.ts
+│   │   │   └── typing/route.ts
+│   │   ├── explore/route.ts
+│   │   ├── me/
+│   │   │   ├── avatar/route.ts
+│   │   │   └── route.ts
+│   │   ├── posts/
+│   │   │   ├── [postId]/
+│   │   │   │   ├── comments/route.ts
+│   │   │   │   └── like/route.ts
+│   │   │   ├── media/route.ts
+│   │   │   ├── threads/route.ts
+│   │   │   └── route.ts
+│   │   ├── presence/
+│   │   │   ├── offline/route.ts
+│   │   │   └── route.ts
+│   │   ├── pusher/auth/route.ts
+│   │   ├── upload/route.ts
+│   │   └── users/
+│   │       ├── [userId]/follow/route.ts
+│   │       └── following/route.ts
+│   │
+│   ├── auth/
+│   │   ├── error/page.tsx
+│   │   ├── login/page.tsx
+│   │   └── register/page.tsx
+│   ├── chat/
+│   │   ├── [conversationId]/page.tsx
+│   │   └── page.tsx
+│   ├── explore/page.tsx
+│   ├── feed/page.tsx
+│   ├── messages/page.tsx
+│   ├── onboarding/page.tsx
+│   ├── post/
+│   │   ├── [postId]/page.tsx
+│   │   └── page.tsx
+│   ├── providers/
+│   │   └── presence-provider.tsx
+│   ├── u/[username]/page.tsx
+│   ├── layout.tsx
+│   └── globals.css
+│
+├── components/
+│   ├── call/
+│   │   ├── incoming-call.tsx
+│   │   ├── LocalMediaPreview.tsx
+│   │   └── Overlay.tsx
+│   ├── chat/
+│   │   ├── call-button.tsx
+│   │   ├── chat-header.tsx
+│   │   ├── chat-layout.tsx
+│   │   ├── chat-message.tsx
+│   │   ├── chat-sidebar.tsx
+│   │   ├── chat-typing.tsx
+│   │   ├── image-message.tsx
+│   │   ├── image-preview-model.tsx
+│   │   └── new-message-model.tsx
+│   ├── feed/
+│   │   ├── FeedClient.tsx
+│   │   ├── FeedTab.tsx
+│   │   ├── MediaFeed.tsx
+│   │   └── ThreadsFeed.tsx
+│   ├── post/PostCard.tsx
+│   ├── profile/
+│   │   ├── EditProfileModel.tsx
+│   │   ├── follow-button.tsx
+│   │   └── profile-card.tsx
+│   ├── comments-form.tsx
+│   ├── create-post-form.tsx
+│   ├── like-button.tsx
+│   └── navbar.tsx
+│
+├── lib/
+│   ├── auth-user.ts
+│   ├── cloudinary.ts
+│   ├── prisma.ts
+│   ├── pusher-client.ts
+│   ├── pusher-server.ts
+│   └── webrtc.ts
+│
+├── prisma/
+│   ├── migrations/
+│   └── schema.prisma
+│
+├── schema/
+│   └── auth.ts
+│
+├── types/
+│   ├── chat.ts
+│   └── next-auth.d.ts
+│
+├── middleware.ts
+├── server.js
+├── next.config.ts
+├── tsconfig.json
+├── package.json
+└── README.md
