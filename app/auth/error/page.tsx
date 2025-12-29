@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 function ErrorContent() {
   const params = useSearchParams();
   const error = params.get("error");
+  console.log(error);
 
   return (
     <div className="p-8">
