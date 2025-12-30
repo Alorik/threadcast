@@ -20,7 +20,6 @@ interface PusherMember {
 }
 
 const PresenceContext = createContext<PresenceContextType | null>(null);
-
 export default function PresenceProvider({
   children,
 }: {

@@ -1,5 +1,15 @@
 import Pusher from "pusher-js";
 
+// 🔍 DEBUG: Check environment variables first
+console.log("🔍 Pusher Environment Variables:", {
+  key: process.env.NEXT_PUBLIC_PUSHER_KEY,
+  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+  keyType: typeof process.env.NEXT_PUBLIC_PUSHER_KEY,
+  keyLength: process.env.NEXT_PUBLIC_PUSHER_KEY?.length,
+  hasKey: !!process.env.NEXT_PUBLIC_PUSHER_KEY,
+  nodeEnv: process.env.NODE_ENV,
+});
+
 // Enable detailed logging in development to debug issues
 if (process.env.NODE_ENV === "development") {
   Pusher.logToConsole = true;
