@@ -50,7 +50,7 @@ pusherClient.connection.bind(
 
 // Debug: Log errors
 pusherClient.connection.bind("error", (err: any) => {
-  console.error("❌ Pusher error:", err);
+
 });
 
 // Debug: Log successful connection
