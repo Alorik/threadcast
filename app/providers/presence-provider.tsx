@@ -6,7 +6,6 @@ type PresenceContextType = {
   onlineUsers: Set<string>;
 };
 
-// Pusher Members type
 interface PusherMembers {
   count: number;
   myID: string;
@@ -31,7 +30,6 @@ export default function PresenceProvider({
   const [pusherClient, setPusherClient] = useState<Pusher | null>(null);
 
   useEffect(() => {
-    // Initialize Pusher only on client side
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
@@ -55,12 +53,10 @@ export default function PresenceProvider({
   useEffect(() => {
     if (!pusherClient) return;
 
-    // Subscribe to presence channel with proper typing
     const channel = pusherClient.subscribe(
       "presence-global"
     ) as PresenceChannel;
 
-    // When subscription succeeds, get all current members
     channel.bind("pusher:subscription_succeeded", (members: PusherMembers) => {
       const memberIds = new Set<string>();
       members.each((member: PusherMember) => {
@@ -70,13 +66,11 @@ export default function PresenceProvider({
       console.log("Initial online users:", Array.from(memberIds));
     });
 
-    // When a new member joins
     channel.bind("pusher:member_added", (member: PusherMember) => {
       console.log("User came online:", member.id);
       setOnlineUsers((prev) => new Set(prev).add(member.id));
     });
 
-    // When a member leaves
     channel.bind("pusher:member_removed", (member: PusherMember) => {
       console.log("User went offline:", member.id);
       setOnlineUsers((prev) => {
