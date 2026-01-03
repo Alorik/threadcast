@@ -15,9 +15,7 @@ const httpsOptions = {
   key: fs.readFileSync(
     path.join(__dirname, "certificates/localhost+3-key.pem")
   ),
-  cert: fs.readFileSync(
-    path.join(__dirname, "certificates/localhost+3.pem")
-  ),
+  cert: fs.readFileSync(path.join(__dirname, "certificates/localhost+3.pem")),
 };
 
 app.prepare().then(() => {
