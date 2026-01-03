@@ -63,7 +63,6 @@ export default function RegisterPage() {
       setLoading(false);
     }
   }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#09090b] px-4 text-white selection:bg-white/20">
       <motion.div
@@ -80,7 +79,6 @@ export default function RegisterPage() {
             Enter your details below to get started
           </p>
         </div>
-
         <form onSubmit={handleRegister} className="space-y-5">
           {/* Username Input */}
           <div className="relative group">
@@ -95,7 +93,6 @@ export default function RegisterPage() {
               className="block w-full rounded-xl border border-zinc-800 bg-zinc-900/50 py-3 pl-10 pr-3 text-sm placeholder:text-zinc-600 focus:border-white/20 focus:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
             />
           </div>
-
           {/* Email Input */}
           <div className="relative group">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -109,8 +106,6 @@ export default function RegisterPage() {
               className="block w-full rounded-xl border border-zinc-800 bg-zinc-900/50 py-3 pl-10 pr-3 text-sm placeholder:text-zinc-600 focus:border-white/20 focus:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
             />
           </div>
-
-          {/* Password Input */}
           <div className="relative group">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <Lock className="h-5 w-5 text-zinc-500 transition-colors group-focus-within:text-white" />
@@ -159,8 +154,6 @@ export default function RegisterPage() {
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Submit Button */}
           <motion.button
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
@@ -178,7 +171,6 @@ export default function RegisterPage() {
             )}
           </motion.button>
         </form>
-
         <div className="text-center text-sm text-zinc-500">
           Already have an account?{" "}
           <button

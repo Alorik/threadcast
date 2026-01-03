@@ -1,15 +1,5 @@
 import Pusher from "pusher-js";
 
-// 🔍 DEBUG: Check environment variables first
-console.log("🔍 Pusher Environment Variables:", {
-  key: process.env.NEXT_PUBLIC_PUSHER_KEY,
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-  keyType: typeof process.env.NEXT_PUBLIC_PUSHER_KEY,
-  keyLength: process.env.NEXT_PUBLIC_PUSHER_KEY?.length,
-  hasKey: !!process.env.NEXT_PUBLIC_PUSHER_KEY,
-  nodeEnv: process.env.NODE_ENV,
-});
-
 // Enable detailed logging in development to debug issues
 if (process.env.NODE_ENV === "development") {
   Pusher.logToConsole = true;
@@ -21,10 +11,8 @@ export const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
   // CRITICAL: Force TLS for secure WebSocket connections over HTTPS
   forceTLS: true,
 
-  // Authorization endpoint for private/presence channels
   authEndpoint: "/api/pusher/auth",
 
-  // Ensure proper content type for auth requests
   authTransport: "ajax",
   auth: {
     headers: {
@@ -35,12 +23,10 @@ export const pusherClient = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
   // Enable both ws and wss transports
   enabledTransports: ["ws", "wss"],
 
-  // Connection timeouts
   activityTimeout: 120000,
   pongTimeout: 30000,
 });
 
-// Debug: Log connection state changes
 pusherClient.connection.bind(
   "state_change",
   (states: { previous: string; current: string }) => {
@@ -48,7 +34,6 @@ pusherClient.connection.bind(
   }
 );
 
-// Debug: Log errors
 pusherClient.connection.bind("error", (err: any) => {
   console.error("❌ Pusher error:", err);
 });
