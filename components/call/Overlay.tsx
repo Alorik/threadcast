@@ -29,6 +29,18 @@ export default function CallOverlay({
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [connectionState, setConnectionState] = useState<string>("new");
+  const [isMicMuted, setIsMicMuted] = useState(false);
+
+  const toggleMic = () => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!audioTrack) return;
+
+    audioTrack.enabled = !audioTrack.enabled;
+    setIsMicMuted(!audioTrack.enabled);
+  };
 
   async function sendSignal(
     type: string,
@@ -400,6 +412,15 @@ export default function CallOverlay({
         playsInline
         className="absolute bottom-6 right-6 w-48 h-36 rounded-xl border-2 border-white/20 object-cover scale-x-[-1] shadow-2xl"
       />
+
+      <button
+        onClick={toggleMic}
+        className={`absolute bottom-6 left-6 px-4 py-3 rounded-full ${
+          isMicMuted ? "bg-red-500" : "bg-black/60"
+        }  text-white transition shadow-lg`}
+      >
+        {isMicMuted ? "Mic Off" : "Mic On"}
+      </button>
 
       <button
         onClick={handleEndCall}
