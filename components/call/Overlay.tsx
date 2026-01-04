@@ -30,6 +30,18 @@ export default function CallOverlay({
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [connectionState, setConnectionState] = useState<string>("new");
   const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+
+  const toggleCamera = () => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    videoTrack.enabled = !videoTrack.enabled;
+    setIsCameraOff(!videoTrack.enabled);
+  };
 
   const toggleMic = () => {
     const stream = localStreamRef.current;
@@ -351,6 +363,7 @@ export default function CallOverlay({
 
   return (
     <div className="fixed inset-0 z-[999] bg-black flex flex-col">
+      {/* Connection Status - Top Left */}
       <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/60 text-white text-xs z-10">
         {connectionState === "connected" ? (
           <span className="flex items-center gap-2">
@@ -370,6 +383,7 @@ export default function CallOverlay({
         )}
       </div>
 
+      {/* Remote Video */}
       <div className="flex-1 relative bg-gradient-to-br from-gray-800 to-gray-900">
         <video
           ref={remoteVideoRef}
@@ -405,29 +419,106 @@ export default function CallOverlay({
         )}
       </div>
 
+      {/* Local Video - Top Right */}
       <video
         ref={localVideoRef}
         autoPlay
         muted
         playsInline
-        className="absolute bottom-6 right-6 w-48 h-36 rounded-xl border-2 border-white/20 object-cover scale-x-[-1] shadow-2xl"
+        className="absolute top-6 right-6 w-48 h-36 rounded-xl border-2 border-white/20 object-cover scale-x-[-1] shadow-2xl z-10"
       />
 
-      <button
-        onClick={toggleMic}
-        className={`absolute bottom-6 left-6 px-4 py-3 rounded-full ${
-          isMicMuted ? "bg-red-500" : "bg-black/60"
-        }  text-white transition shadow-lg`}
-      >
-        {isMicMuted ? "Mic Off" : "Mic On"}
-      </button>
+      {/* Control Buttons - Bottom Center */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 z-20">
+        {/* Mic Button */}
+        <button
+          onClick={toggleMic}
+          className={`p-4 rounded-full transition shadow-lg ${
+            isMicMuted
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-white/20 hover:bg-white/30"
+          }`}
+          title={isMicMuted ? "Unmute Microphone" : "Mute Microphone"}
+        >
+          <svg
+            className="w-6 h-6 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {isMicMuted ? (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+              />
+            ) : (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+              />
+            )}
+          </svg>
+        </button>
 
-      <button
-        onClick={handleEndCall}
-        className="absolute top-6 right-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors shadow-lg z-10"
-      >
-        End Call
-      </button>
+        {/* End Call Button */}
+        <button
+          onClick={handleEndCall}
+          className="p-4 rounded-full bg-red-500 hover:bg-red-600 transition shadow-lg"
+          title="End Call"
+        >
+          <svg
+            className="w-6 h-6 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"
+            />
+          </svg>
+        </button>
+
+        {/* Camera Button */}
+        <button
+          onClick={toggleCamera}
+          className={`p-4 rounded-full transition shadow-lg ${
+            isCameraOff
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-white/20 hover:bg-white/30"
+          }`}
+          title={isCameraOff ? "Turn Camera On" : "Turn Camera Off"}
+        >
+          <svg
+            className="w-6 h-6 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {isCameraOff ? (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+              />
+            ) : (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            )}
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
