@@ -3,10 +3,30 @@ import { parse } from "url";
 import next from "next";
 import fs from "fs";
 import path from "path";
+import { networkInterfaces } from "os";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "0.0.0.0"; // Listen on all network interfaces
 const port = 3000;
+
+// Get local IP address dynamically
+function getLocalIP(): string {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    const netInterface = nets[name];
+    if (!netInterface) continue;
+
+    for (const net of netInterface) {
+      // Skip internal (loopback) and non-IPv4 addresses
+      if (net.family === "IPv4" && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return "localhost"; // Fallback if no network interface found
+}
+
+const localIP = getLocalIP();
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -32,6 +52,6 @@ app.prepare().then(() => {
     if (err) throw err;
     console.log(`> Ready on https://${hostname}:${port}`);
     console.log(`> Local:    https://localhost:${port}`);
-    console.log(`> Network:  https://192.168.1.10:${port}`);
+    console.log(`> Network:  https://${localIP}:${port}`);
   });
 });
